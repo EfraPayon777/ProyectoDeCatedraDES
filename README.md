@@ -79,7 +79,7 @@ Todas las operaciones que modifican inventario utilizan transacciones explícita
 
 ### Paso 1: Clonar el Repositorio
 ```bash
-git clone https://github.com/EfraPayon777/ProyetoDeCatedraDES.git
+git clone https://github.com/EfraPayon777/ProyectoDeCatedraDES.git
 cd ProyetoDeCatedraDES
 ```
 
