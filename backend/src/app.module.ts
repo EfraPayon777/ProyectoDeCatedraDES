@@ -27,16 +27,29 @@ const dbType = process.env.DB_TYPE || 'sqlite';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       useFactory: () => {
-        if (dbType === 'postgres' || process.env.POSTGRES_HOST) {
+        const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+        const isPostgres = dbType === 'postgres' || !!databaseUrl || !!process.env.POSTGRES_HOST || !!process.env.PGHOST;
+
+        if (isPostgres) {
+          if (databaseUrl) {
+            return {
+              type: 'postgres',
+              url: databaseUrl,
+              ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+              entities: [Usuario, Categoria, Repuesto, EntradaInventario, Orden, DetalleOrden],
+              synchronize: true, // Para desarrollo y cátedra
+            };
+          }
           return {
             type: 'postgres',
-            host: process.env.POSTGRES_HOST || 'localhost',
-            port: parseInt(process.env.POSTGRES_PORT, 10) || 5432,
-            username: process.env.POSTGRES_USER || 'postgres',
-            password: process.env.POSTGRES_PASSWORD || 'postgres',
-            database: process.env.POSTGRES_DB || 'lubripoint_db',
+            host: process.env.POSTGRES_HOST || process.env.PGHOST || 'localhost',
+            port: parseInt(process.env.POSTGRES_PORT || process.env.PGPORT || '5432', 10),
+            username: process.env.POSTGRES_USER || process.env.PGUSER || 'postgres',
+            password: process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || 'postgres',
+            database: process.env.POSTGRES_DB || process.env.PGDATABASE || 'lubripoint_db',
+            ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
             entities: [Usuario, Categoria, Repuesto, EntradaInventario, Orden, DetalleOrden],
-            synchronize: true, // Para desarrollo inicial
+            synchronize: true,
           };
         } else {
           return {
