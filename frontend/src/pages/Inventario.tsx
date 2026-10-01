@@ -7,6 +7,7 @@ import {
   Plus,
   Edit2,
   Trash2,
+  Eye,
   Image as ImageIcon,
   AlertCircle,
   PackageCheck
@@ -15,6 +16,7 @@ import api, { downloadExcelFile } from '../services/api';
 import { Repuesto } from '../types';
 import { EntradaModal } from '../components/EntradaModal';
 import { ProductoModal } from '../components/ProductoModal';
+import { ProductoPreviewModal } from '../components/ProductoPreviewModal';
 import Swal from 'sweetalert2';
 
 export const Inventario: React.FC = () => {
@@ -22,6 +24,7 @@ export const Inventario: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedRepuestoEntrada, setSelectedRepuestoEntrada] = useState<Repuesto | null>(null);
   const [selectedRepuestoEdit, setSelectedRepuestoEdit] = useState<Repuesto | null>(null);
+  const [selectedRepuestoPreview, setSelectedRepuestoPreview] = useState<Repuesto | null>(null);
   const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -97,7 +100,9 @@ export const Inventario: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#FFB800]">Inventario / Stock</h1>
-          <p className="text-xs sm:text-sm text-slate-400">Consulta de existencias en tiempo real, registro y edición de repuestos</p>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Consulta de existencias, vista previa con fotos en detalle y gestión de repuestos
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -184,21 +189,46 @@ export const Inventario: React.FC = () => {
 
                 return (
                   <tr key={item.id} className="hover:bg-[#1B2237]/50 transition-colors">
+                    {/* Foto interactiva: Clic abre la vista previa en gran formato */}
                     <td className="py-3 px-4">
-                      {item.imagenUrl ? (
-                        <img
-                          src={item.imagenUrl}
-                          alt={item.nombre}
-                          className="w-10 h-10 rounded-lg object-cover border border-[#222D46]"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-[#1B2237] rounded-lg border border-[#222D46] flex items-center justify-center text-slate-500">
-                          <ImageIcon className="w-5 h-5" />
-                        </div>
-                      )}
+                      <div
+                        onClick={() => setSelectedRepuestoPreview(item)}
+                        className="relative group cursor-pointer inline-block"
+                        title="Haz clic para ver foto en tamaño grande y ficha completa"
+                      >
+                        {item.imagenUrl ? (
+                          <div className="relative w-11 h-11 rounded-lg overflow-hidden border border-[#222D46] group-hover:border-[#FFB800] transition-all group-hover:scale-105 shadow-md">
+                            <img
+                              src={item.imagenUrl}
+                              alt={item.nombre}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <Eye className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-11 h-11 bg-[#1B2237] rounded-lg border border-[#222D46] group-hover:border-[#FFB800] flex items-center justify-center text-slate-500 group-hover:text-[#FFB800] transition-all">
+                            <ImageIcon className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
                     </td>
+
                     <td className="py-3 px-4 font-bold text-[#FFB800]">{item.codigo}</td>
-                    <td className="py-3 px-4 font-semibold text-white">{item.nombre}</td>
+
+                    {/* Nombre interactivo con clic para ver vista previa */}
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => setSelectedRepuestoPreview(item)}
+                        className="font-semibold text-white hover:text-[#FFB800] text-left transition-colors cursor-pointer flex items-center space-x-1.5 group"
+                        title="Ver detalles completos de este producto"
+                      >
+                        <span>{item.nombre}</span>
+                        <Eye className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-[#FFB800] transition-opacity" />
+                      </button>
+                    </td>
+
                     <td className="py-3 px-4 text-slate-400 max-w-xs truncate">{item.descripcion || '---'}</td>
                     <td className="py-3 px-4 font-bold text-slate-100">${Number(item.precioFinal).toFixed(2)}</td>
                     <td className="py-3 px-4 text-center">
@@ -216,6 +246,15 @@ export const Inventario: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Botón Vista Previa / Ficha Detallada */}
+                        <button
+                          onClick={() => setSelectedRepuestoPreview(item)}
+                          title="Vista Previa y Ficha Técnica"
+                          className="p-1.5 bg-[#1B2237] hover:bg-purple-500/20 text-purple-400 rounded-md border border-[#222D46] transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
                         {/* Entrada de Stock */}
                         <button
                           onClick={() => setSelectedRepuestoEntrada(item)}
@@ -224,6 +263,7 @@ export const Inventario: React.FC = () => {
                         >
                           <PlusCircle className="w-4 h-4" />
                         </button>
+
                         {/* Editar Producto */}
                         <button
                           onClick={() => {
@@ -235,6 +275,7 @@ export const Inventario: React.FC = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
+
                         {/* Eliminar Producto */}
                         <button
                           onClick={() => handleDelete(item)}
@@ -282,6 +323,19 @@ export const Inventario: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['repuestos-catalog'] });
           queryClient.invalidateQueries({ queryKey: ['repuestos'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+        }}
+      />
+
+      {/* Modal para Vista Previa Interactiva del Producto */}
+      <ProductoPreviewModal
+        repuesto={selectedRepuestoPreview}
+        onClose={() => setSelectedRepuestoPreview(null)}
+        onEdit={(repuesto) => {
+          setSelectedRepuestoEdit(repuesto);
+          setIsProductoModalOpen(true);
+        }}
+        onAddStock={(repuesto) => {
+          setSelectedRepuestoEntrada(repuesto);
         }}
       />
     </div>
