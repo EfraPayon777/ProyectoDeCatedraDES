@@ -1,5 +1,12 @@
 # LUBRIPOINT - Sistema Web de Gestión de Inventario, Repuestos y Reparaciones
 
+> **Proyecto de Cátedra - Desarrollo de Software Empresarial (UDB)**  
+> **Sistema Desplegado en la Nube:**
+> - 🌐 **Frontend (Vercel):** [https://proyecto-de-catedra-des.vercel.app](https://proyecto-de-catedra-des.vercel.app)
+> - ⚙️ **Backend API (Render):** [https://proyectodecatedrades.onrender.com/api](https://proyectodecatedrades.onrender.com/api)
+> - 📚 **Documentación Swagger / OpenAPI:** [https://proyectodecatedrades.onrender.com/api/docs](https://proyectodecatedrades.onrender.com/api/docs)
+> - 📋 **Guía de Despliegue:** [DEPLOY.md](DEPLOY.md) | **Documentos:** [/docs](docs/) | **Mockups:** [/mockups](mockups/)
+
 ## 1. Descripción General del Proyecto
 Lubripoint es un sistema web integral diseñado para la gestión de inventario, catálogo de repuestos, registro de entradas de stock, procesamiento de salidas por reparaciones (órdenes de trabajo) y generación de reportes financieros y de consumo para un taller mecánico y lubricentro.
 
@@ -138,3 +145,16 @@ Los principales endpoints expuestos por el backend son:
 - GET /api/reportes/piezas-mas-usadas: Obtener listado de piezas más consumidas.
 - GET /api/reportes/exportar-inventario: Descargar archivo Excel del inventario.
 - GET /api/reportes/exportar-ventas: Descargar archivo Excel del historial de ventas.
+
+---
+
+## 9. Declaración de Uso de Inteligencia Artificial (IA)
+
+En cumplimiento con el **Numeral 3 de los Lineamientos del Proyecto de Cátedra (UDB)**:
+
+> *"Declaramos que el equipo de desarrollo utilizó herramientas de Inteligencia Artificial (asistentes de código basados en modelos LLM) como apoyo para la comprensión de conceptos arquitectónicos, depuración de errores de configuración en TypeScript/Vite, optimización de transacciones atómicas con TypeORM y asistencia en la redacción técnica. Todo el código generado fue minuciosamente analizado, adaptado, integrado y probado por los integrantes del equipo para asegurar el cumplimiento de la lógica de negocio requerida por el taller Lubripoint."*
+
+### Prompt Muestra Utilizado:
+```text
+"Actúa como un arquitecto de software empresarial. Ayúdame a diseñar una arquitectura limpia en NestJS con TypeORM para un sistema de inventario y órdenes de trabajo automotriz. Necesito que al momento de emitir una orden de trabajo se valide el stock disponible de cada repuesto y se descuenten las existencias dentro de una transacción atómica (QueryRunner) con rollback automático en caso de falta de stock o error."
+```
