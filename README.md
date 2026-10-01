@@ -1,16 +1,21 @@
 # LUBRIPOINT - Sistema Web de Gestión de Inventario, Repuestos y Reparaciones
 
-> **Proyecto de Cátedra - Desarrollo de Software Empresarial (UDB)**  
-> **Sistema Desplegado en la Nube:**
-> - 🌐 **Frontend (Vercel):** [https://proyecto-de-catedra-des.vercel.app](https://proyecto-de-catedra-des.vercel.app)
-> - ⚙️ **Backend API (Render):** [https://proyectodecatedrades.onrender.com/api](https://proyectodecatedrades.onrender.com/api)
-> - 📚 **Documentación Swagger / OpenAPI:** [https://proyectodecatedrades.onrender.com/api/docs](https://proyectodecatedrades.onrender.com/api/docs)
-> - 📋 **Guía de Despliegue:** [DEPLOY.md](DEPLOY.md) | **Documentos:** [/docs](docs/) | **Mockups:** [/mockups](mockups/)
+> **Universidad Don Bosco - Facultad de Ingeniería**  
+> **Escuela de Computación | Desarrollo de Software Empresarial**  
+> 
+> **Enlaces del Sistema en Producción:**  
+> - Frontend (Vercel): [https://proyecto-de-catedra-des.vercel.app](https://proyecto-de-catedra-des.vercel.app)  
+> - Backend API (Render): [https://proyectodecatedrades.onrender.com/api](https://proyectodecatedrades.onrender.com/api)  
+> - Documentación Swagger / OpenAPI: [https://proyectodecatedrades.onrender.com/api/docs](https://proyectodecatedrades.onrender.com/api/docs)  
+> - Recursos del Proyecto: [DEPLOY.md](DEPLOY.md) | [Carpeta /docs](docs/) | [Carpeta /mockups](mockups/)
+
+---
 
 ## 1. Descripción General del Proyecto
-Lubripoint es un sistema web integral diseñado para la gestión de inventario, catálogo de repuestos, registro de entradas de stock, procesamiento de salidas por reparaciones (órdenes de trabajo) y generación de reportes financieros y de consumo para un taller mecánico y lubricentro.
 
-El sistema resuelve la problemática de control de inventario reactivo al implementar alertas inteligentes automatizadas de bajo stock parametrizables, garantizando respuestas en catálogo inferiores a 2 segundos y manteniendo la integridad de las existencias mediante transacciones atómicas de base de datos.
+Lubripoint es un sistema web desarrollado para la administración de inventario, catálogo de repuestos, registro de compras y entradas de stock, emisión de órdenes de trabajo con salida automática de materiales y generación de reportes financieros y de existencias para un taller mecánico y lubricentro automotriz.
+
+El sistema solventa la falta de control de inventario en tiempo real mediante un mecanismo de alertas parametrizables de bajo stock y asegura la consistencia de las existencias mediante transacciones de base de datos que ejecutan rollback ante cualquier eventualidad de stock insuficiente.
 
 ---
 
@@ -18,67 +23,64 @@ El sistema resuelve la problemática de control de inventario reactivo al implem
 
 ### Backend
 - Framework: NestJS (Node.js) con TypeScript.
-- Base de Datos y ORM: PostgreSQL / SQLite administrado mediante TypeORM con soporte para transacciones atómicas (QueryRunner).
-- Autenticación y Seguridad: JSON Web Tokens (JWT) mediante Passport.js, protección de rutas mediante Guards personalizados e inmutabilidad de contraseñas con bcrypt.
-- Validaciones: Validaciones estrictas con class-validator y class-transformer.
-- Documentación API: Documentación interactiva OpenAPI generada con @nestjs/swagger y swagger-ui-express.
-- Almacenamiento en la Nube: Integración con la API de Cloudinary para la carga y optimización de imágenes de los repuestos.
-- Utilidades y Reportes: date-fns / dayjs para manejo de fechas y librería xlsx para generación de reportes en formato Excel.
+- Base de Datos y ORM: PostgreSQL administrado con TypeORM y soporte de transacciones mediante QueryRunner.
+- Autenticación y Seguridad: JSON Web Tokens (JWT) con Passport.js, control de acceso basado en roles (Guards) y encriptación de contraseñas con bcrypt.
+- Validaciones: Esquemas de validación con class-validator y class-transformer.
+- Documentación API: Especificación OpenAPI interactiva generada con Swagger.
+- Almacenamiento Multimedia: Integración con Cloudinary y soporte de respaldo para almacenamiento de fotografías de repuestos.
+- Reportes: Generación y exportación de archivos en formato Excel mediante la librería xlsx.
 
 ### Frontend
-- Framework y Empaquetado: React 18 empaquetado con Vite y desarrollado en TypeScript.
-- Estilos y UI: Tailwind CSS implementando un sistema de diseño adaptativo en modo oscuro orientado a uso en talleres y dispositivos móviles.
-- Iconografía y Modales: lucide-react para iconografía e integración de sweetalert2 para cuadros de diálogo de confirmación.
-- Gestión de Estado Servidor: @tanstack/react-query para el manejo asíncrono y caché del estado del servidor.
-- Tablas Dinámicas: @tanstack/react-table para ordenamiento y filtrado de datos.
-- Formularios: react-hook-form con validaciones estrictas construidas con zod.
+- Framework y Empaquetado: React 18 desarrollado con TypeScript y empaquetado con Vite.
+- Estilos y Maquetación: Tailwind CSS con soporte para interfaz en tema oscuro, adaptada a entornos de taller.
+- Iconografía: Iconos vectoriales mediante lucide-react y alertas interactivas con SweetAlert2.
+- Gestión de Estado Servidor: Manejo de peticiones asíncronas y caché con TanStack React Query.
+- Formularios: Formularios estructurados con validaciones en cliente.
 
 ---
 
-## 3. Modelo de Datos y Entidades TypeORM
+## 3. Modelo de Datos y Entidades
 
-El modelo de datos relacional se compone de seis entidades principales:
+El modelo relacional del sistema está compuesto por las siguientes entidades principales:
 
-1. Usuario: Almacena la información de los usuarios del sistema (nombre, email, password encriptado, rol y estado activo). Soporta tres roles: Administrador, Jefe de Pista y Mecánico.
-2. Categoria: Clasifica los repuestos e insumos del taller (ejemplo: Aceite de Motor, Aceite de Caja, Frenos, Suspensión y Dirección, Filtros, Fajas y Accesorios).
-3. Repuesto: Contiene el detalle de cada artículo del catálogo. Incluye código, nombre, descripción, costo sin IVA, costo con IVA, precio final de venta, stock actual, umbral mínimo de stock (stockMinimo) e imagen almacenada en la nube.
-4. EntradaInventario: Registra los ingresos de mercadería al taller indicando el repuesto, la cantidad recibida, el proveedor, el costo de adquisición y la fecha exacta de ingreso.
-5. Orden: Representa las órdenes de trabajo y facturas emitidas. Registra el código correlativo de orden (ejemplo: #000001), datos del vehículo (placa, marca, modelo), datos del cliente (nombre, teléfono), descripción del trabajo o falla, subtotal, descuento, total final y mecánico asignado.
-6. DetalleOrden: Mantiene la relación de repuestos utilizados en cada orden de trabajo con su respectiva cantidad, precio unitario y subtotal.
+1. Usuario: Datos de cuenta (nombre, correo electrónico, contraseña encriptada, rol y estado de activación). Soporta los roles Administrador, Jefe de Pista y Mecánico.
+2. Categoria: Clasificación de repuestos e insumos (por ejemplo: Aceite de Motor, Aceite de Caja, Frenos, Suspensión y Dirección, Filtros, Fajas y Accesorios).
+3. Repuesto: Ficha técnica de cada artículo del catálogo. Almacena código SKU, nombre, descripción, costo de adquisición sin IVA, costo con IVA, precio de venta, stock actual, stock mínimo para alertas y enlace a la imagen del producto.
+4. EntradaInventario: Registro de recepciones de mercadería indicando repuesto, cantidad recibida, proveedor, costo unitario y fecha de ingreso.
+5. Orden: Órdenes de trabajo y comprobantes de venta emitidos. Contiene código correlativo, datos del cliente (nombre, teléfono), datos del vehículo (placa, marca, modelo), descripción de la falla o servicio, subtotal, descuento, monto total y mecánico asignado.
+6. DetalleOrden: Detalle de repuestos asociados a cada orden con sus cantidades, precios unitarios y subtotales.
 
 ---
 
 ## 4. Requisitos Funcionales y Lógica de Negocio
 
-### Gestión de Usuarios y Control de Acceso (RBAC)
-El sistema restringe las operaciones de acuerdo a tres roles:
-- Administrador: Acceso total al sistema, creación de usuarios administradores, gestión del catálogo, ajustes de inventario y consulta de reportes.
-- Jefe de Pista: Gestión del catálogo, registro de entradas de inventario y emisión de órdenes de trabajo.
-- Mecánico: Consulta del catálogo de repuestos y registro de órdenes asociadas a servicios.
+### Control de Acceso Basado en Roles (RBAC)
+- Administrador: Acceso total al sistema, administración de usuarios, ajustes de catálogo, control de stock y consulta de métricas financieras.
+- Jefe de Pista: Gestión de catálogo, registro de entradas de inventario y generación de órdenes de trabajo.
+- Mecánico: Consulta del catálogo de repuestos y visualización de órdenes de trabajo.
 
-### Alertas Inteligentes de Stock
-Sustituye los sistemas reactivos tradicionales notificando automáticamente en pantalla y en el tablero principal cuando las existencias de un repuesto alcanzan o caen por debajo de su umbral mínimo parametrizado (stockMinimo).
+### Alertas de Inventario
+Notificación visual automática en el tablero principal y en la tabla de inventario cuando las existencias de un repuesto alcanzan o caen por debajo de su umbral mínimo configurado.
 
-### Transacciones Atómicas
-Todas las operaciones que modifican inventario utilizan transacciones explícitas de TypeORM:
-- Entradas de Inventario: El incremento de stock y el registro del proveedor se ejecutan dentro de una misma transacción.
-- Salidas por Orden de Trabajo: Se verifica la disponibilidad previa de cada repuesto. Al confirmar la orden, se descuenta el stock de cada artículo de forma atómica y se genera el registro de la orden. Si un repuesto no cuenta con existencias suficientes, la transacción completa realiza rollback impidiendo inconsistencias.
+### Manejo Transaccional
+- Entradas de Inventario: La actualización de existencias y el registro histórico del proveedor se ejecutan dentro de la misma transacción.
+- Órdenes de Trabajo: Antes de confirmar la venta, se valida la disponibilidad física de cada repuesto. Durante la confirmación se descuentan las cantidades de forma atómica. Si algún artículo no cuenta con suficiente stock, la transacción realiza rollback completo para evitar descuadres en el inventario.
 
 ---
 
-## 5. Pantallas y Vistas del Frontend
+## 5. Módulos y Pantallas del Sistema
 
-1. Login: Formulario de autenticación seguro basado en credenciales.
-2. Dashboard General: Panel de control central con tarjetas de resumen financiero (total facturado, total descuentos, órdenes emitidas), alertas de bajo stock, accesos rápidos y listado de repuestos más utilizados.
-3. Facturación / Nueva Orden: Interfaz dividida que permite buscar repuestos del catálogo, agregarlos a un carrito lateral con ajuste de cantidades, ingresar datos del vehículo y cliente, aplicar descuentos y emitir la orden con vista de comprobante imprimible.
-4. Gestión de Categorías y Agregar Producto: Formularios para la administración de categorías del taller y registro de nuevos artículos con carga de imágenes.
-5. Historial de Ventas: Tabla de consulta de órdenes emitidas con opción de re-impresión de comprobante y descarga de reporte en Excel.
-6. Inventario / Consulta de Stock: Tabla principal de existencias con buscador en tiempo real por código o nombre, identificadores visuales por color de estado de stock, modal para registro de entradas de mercadería y exportación a Excel.
-7. Perfiles (Configuración y Equipo): Panel para la edición del perfil activo y administración del equipo de usuarios registrados.
+1. Login: Autenticación por correo y contraseña con retorno de token JWT.
+2. Dashboard Principal: Resumen financiero (total facturado, descuentos otorgados y total de órdenes emitidas), alertas de bajo stock, accesos rápidos y piezas más consumidas.
+3. Facturación / Nueva Venta: Búsqueda interactiva de repuestos, carrito lateral con cálculo automático de importes, captura de datos del cliente/vehículo y emisión de comprobante de venta.
+4. Inventario / Stock: Consulta general de existencias, buscador en tiempo real, registro de nuevos productos, edición de repuestos existentes, registro de entradas de mercadería y descarga de reporte Excel.
+5. Gestión de Categorías: Mantenimiento completo de clasificaciones del taller (creación, edición de nombre y eliminación).
+6. Historial de Ventas: Tabla de órdenes emitidas con opción de reimpresión de comprobante y exportación de transacciones a Excel.
+7. Perfiles y Equipo: Administración del perfil del usuario en sesión y consulta del personal registrado.
 
 ---
 
-## 6. Instrucciones de Instalación y Ejecución
+## 6. Instalación y Ejecución en Entorno Local
 
 ### Requisitos Previos
 - Node.js versión 18 o superior.
@@ -87,74 +89,75 @@ Todas las operaciones que modifican inventario utilizan transacciones explícita
 ### Paso 1: Clonar el Repositorio
 ```bash
 git clone https://github.com/EfraPayon777/ProyectoDeCatedraDES.git
-cd ProyetoDeCatedraDES
+cd ProyectoDeCatedraDES
 ```
 
-### Paso 2: Iniciar el Servidor Backend
+### Paso 2: Iniciar el Backend
 ```bash
 cd backend
 npm install
 npm run start:dev
 ```
-- La API REST se ejecutará en: http://localhost:3000/api
-- La documentación OpenAPI/Swagger estará disponible en: http://localhost:3000/api/docs
+- API REST disponible en: http://localhost:3000/api
+- Documentación Swagger disponible en: http://localhost:3000/api/docs
 
-### Paso 3: Iniciar el Servidor Frontend
+### Paso 3: Iniciar el Frontend
 ```bash
 cd ../frontend
 npm install
 npm run dev
 ```
-- La aplicación frontend estará disponible en: http://localhost:5173
+- Aplicación disponible en: http://localhost:5173
 
 ---
 
-## 7. Credenciales Predeterminadas de Prueba
+## 7. Credenciales de Prueba
 
-Al iniciar el backend por primera vez, el sistema siembra automáticamente los datos iniciales de prueba:
+Al inicializar el sistema por primera vez, se generan datos de demostración para evaluación:
 - Correo Electrónico: lubripointsv@gmail.com
 - Contraseña: admin123
-- Rol: Administrador
+- Rol Asignado: Administrador
 
 ---
 
-## 8. Documentación de la API REST
+## 8. Endpoints de la API REST
 
-Los principales endpoints expuestos por el backend son:
+Los principales recursos provistos por el backend son:
 
-- POST /api/auth/login: Iniciar sesión y obtener token JWT.
-- POST /api/auth/register: Registrar usuario administrador.
-- GET /api/auth/profile: Obtener datos del usuario autenticado.
-- PUT /api/auth/profile: Actualizar datos del perfil activo.
-- GET /api/auth/admins: Listar administradores registrados.
-- GET /api/categorias: Listar categorías.
-- POST /api/categorias: Crear nueva categoría.
-- DELETE /api/categorias/:id: Eliminar categoría.
-- GET /api/repuestos: Listar catálogo con filtros de búsqueda.
-- GET /api/repuestos/alertas-stock: Obtener repuestos con bajo stock.
-- POST /api/repuestos: Crear nuevo repuesto.
-- POST /api/repuestos/upload-image: Subir imagen a Cloudinary.
-- PUT /api/repuestos/:id: Actualizar repuesto.
-- DELETE /api/repuestos/:id: Eliminar repuesto.
-- GET /api/entradas: Historial de entradas de inventario.
-- POST /api/entradas: Registrar nueva entrada e incrementar stock.
-- GET /api/ordenes: Listar historial de órdenes de trabajo.
-- GET /api/ordenes/:id: Obtener detalle de una orden.
-- POST /api/ordenes: Emitir orden de trabajo y descontar stock.
-- GET /api/reportes/dashboard: Obtener resumen financiero y métricas.
-- GET /api/reportes/piezas-mas-usadas: Obtener listado de piezas más consumidas.
-- GET /api/reportes/exportar-inventario: Descargar archivo Excel del inventario.
-- GET /api/reportes/exportar-ventas: Descargar archivo Excel del historial de ventas.
+- POST /api/auth/login: Autenticación de usuarios y entrega de token JWT.
+- POST /api/auth/register: Registro de nuevos usuarios con rol administrativo.
+- GET /api/auth/profile: Consulta de datos del usuario autenticado.
+- PUT /api/auth/profile: Modificación de información del perfil activo.
+- GET /api/auth/admins: Listado del equipo de administradores registrados.
+- GET /api/categorias: Consulta general de categorías.
+- POST /api/categorias: Registro de una nueva categoría.
+- PUT /api/categorias/:id: Actualización del nombre de una categoría existente.
+- DELETE /api/categorias/:id: Eliminación de categoría.
+- GET /api/repuestos: Consulta de catálogo con parámetros de búsqueda y filtro por categoría.
+- GET /api/repuestos/alertas-stock: Consulta de artículos con existencias por debajo del umbral mínimo.
+- POST /api/repuestos: Registro de un nuevo repuesto.
+- PUT /api/repuestos/:id: Actualización de datos de un repuesto existente.
+- DELETE /api/repuestos/:id: Eliminación de un repuesto del catálogo.
+- POST /api/repuestos/upload-image: Carga de imagen del producto.
+- GET /api/entradas: Consulta histórica de entradas de inventario.
+- POST /api/entradas: Registro de entrada de mercadería con incremento de stock.
+- GET /api/ordenes: Consulta del historial de órdenes de trabajo.
+- GET /api/ordenes/:id: Consulta del detalle de una orden de trabajo.
+- POST /api/ordenes: Emisión de orden con descuento automático de existencias.
+- GET /api/reportes/dashboard: Métricas consolidadas del panel de control.
+- GET /api/reportes/piezas-mas-usadas: Estadísticas de repuestos más utilizados.
+- GET /api/reportes/exportar-inventario: Descarga de archivo Excel con el inventario completo.
+- GET /api/reportes/exportar-ventas: Descarga de archivo Excel con el historial de ventas.
 
 ---
 
-## 9. Declaración de Uso de Inteligencia Artificial (IA)
+## 9. Declaración de Uso de Inteligencia Artificial
 
-En cumplimiento con el **Numeral 3 de los Lineamientos del Proyecto de Cátedra (UDB)**:
+En cumplimiento con los lineamientos de la asignatura sobre el uso de herramientas de inteligencia artificial:
 
-> *"Declaramos que el equipo de desarrollo utilizó herramientas de Inteligencia Artificial (asistentes de código basados en modelos LLM) como apoyo para la comprensión de conceptos arquitectónicos, depuración de errores de configuración en TypeScript/Vite, optimización de transacciones atómicas con TypeORM y asistencia en la redacción técnica. Todo el código generado fue minuciosamente analizado, adaptado, integrado y probado por los integrantes del equipo para asegurar el cumplimiento de la lógica de negocio requerida por el taller Lubripoint."*
+> "Declaramos que el equipo de trabajo utilizó herramientas de inteligencia artificial como apoyo para la consulta de conceptos técnicos, depuración de errores de configuración en TypeScript y revisión de la redacción técnica del proyecto. El diseño de la arquitectura, la estructura de la base de datos relacional y la implementación de la lógica de negocio fueron desarrollados, revisados y validados en su totalidad por los integrantes del equipo."
 
-### Prompt Muestra Utilizado:
+### Prompt de Referencia Utilizado:
 ```text
-"Actúa como un arquitecto de software empresarial. Ayúdame a diseñar una arquitectura limpia en NestJS con TypeORM para un sistema de inventario y órdenes de trabajo automotriz. Necesito que al momento de emitir una orden de trabajo se valide el stock disponible de cada repuesto y se descuenten las existencias dentro de una transacción atómica (QueryRunner) con rollback automático en caso de falta de stock o error."
+"Ayúdame a diseñar la arquitectura en NestJS con TypeORM para un sistema de inventario y órdenes de trabajo automotriz. Se requiere que al emitir una orden de trabajo se valide el stock disponible de cada repuesto y se descuenten las existencias dentro de una transacción con rollback automático si no hay suficiente stock."
 ```
