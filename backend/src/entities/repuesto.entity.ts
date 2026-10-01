@@ -32,7 +32,7 @@ export class Repuesto {
   @Column({ type: 'int', default: 5 })
   stockMinimo: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   imagenUrl: string;
 
   @Column({ nullable: true })
