@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   FileSpreadsheet,
@@ -9,7 +10,7 @@ import {
   Trash2,
   Eye,
   Image as ImageIcon,
-  AlertCircle,
+  AlertTriangle,
   PackageCheck
 } from 'lucide-react';
 import api, { downloadExcelFile } from '../services/api';
@@ -21,12 +22,26 @@ import Swal from 'sweetalert2';
 
 export const Inventario: React.FC = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [search, setSearch] = useState('');
+  const [filtroStock, setFiltroStock] = useState<'todos' | 'normal' | 'bajo' | 'agotado'>(
+    (searchParams.get('filtro') as any) || 'todos'
+  );
+
   const [selectedRepuestoEntrada, setSelectedRepuestoEntrada] = useState<Repuesto | null>(null);
   const [selectedRepuestoEdit, setSelectedRepuestoEdit] = useState<Repuesto | null>(null);
   const [selectedRepuestoPreview, setSelectedRepuestoPreview] = useState<Repuesto | null>(null);
   const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Sincronizar parámetro URL si cambia
+  useEffect(() => {
+    const param = searchParams.get('filtro');
+    if (param && ['todos', 'normal', 'bajo', 'agotado'].includes(param)) {
+      setFiltroStock(param as any);
+    }
+  }, [searchParams]);
 
   const { data: repuestos, isLoading } = useQuery<Repuesto[]>({
     queryKey: ['inventario-stock', search],
@@ -94,6 +109,29 @@ export const Inventario: React.FC = () => {
     }
   };
 
+  // Conteo de estados
+  const countAgotados = repuestos?.filter((i) => i.stockActual <= 0).length || 0;
+  const countBajo = repuestos?.filter((i) => i.stockActual > 0 && i.stockActual <= i.stockMinimo).length || 0;
+  const countNormal = repuestos?.filter((i) => i.stockActual > i.stockMinimo).length || 0;
+
+  // Filtrado de items
+  const repuestosFiltrados = repuestos?.filter((item) => {
+    if (filtroStock === 'agotado') return item.stockActual <= 0;
+    if (filtroStock === 'bajo') return item.stockActual > 0 && item.stockActual <= item.stockMinimo;
+    if (filtroStock === 'normal') return item.stockActual > item.stockMinimo;
+    return true;
+  });
+
+  const cambiarFiltro = (nuevoFiltro: 'todos' | 'normal' | 'bajo' | 'agotado') => {
+    setFiltroStock(nuevoFiltro);
+    if (nuevoFiltro === 'todos') {
+      searchParams.delete('filtro');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ filtro: nuevoFiltro });
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Title Header with Action Buttons */}
@@ -101,7 +139,7 @@ export const Inventario: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#FFB800]">Inventario / Stock</h1>
           <p className="text-xs sm:text-sm text-slate-400">
-            Consulta de existencias, vista previa con fotos en detalle y gestión de repuestos
+            Consulta de existencias, control de umbrales mínimos y alertas automáticas
           </p>
         </div>
 
@@ -130,9 +168,9 @@ export const Inventario: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar matching screenshot */}
-      <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-4 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
+      {/* Search Bar y Pestañas Interactivas de Filtrado de Stock */}
+      <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="relative w-full md:w-80">
           <input
             type="text"
             placeholder="Buscar por código o nombre..."
@@ -145,21 +183,74 @@ export const Inventario: React.FC = () => {
           </button>
         </div>
 
-        <div className="text-xs text-slate-400 flex items-center space-x-4">
-          <span className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
-            <span>Stock Normal</span>
-          </span>
-          <span className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
-            <span>Bajo Stock</span>
-          </span>
-          <span className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>
-            <span>Agotado</span>
-          </span>
+        {/* Filtros Clicables Rápidos con Conteo de Alertas */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button
+            onClick={() => cambiarFiltro('todos')}
+            className={`px-3 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer ${
+              filtroStock === 'todos'
+                ? 'bg-slate-200 text-slate-950 border-white'
+                : 'bg-[#1B2237] text-slate-400 border-[#222D46] hover:text-white'
+            }`}
+          >
+            Todos ({repuestos?.length || 0})
+          </button>
+
+          <button
+            onClick={() => cambiarFiltro('normal')}
+            className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center space-x-1.5 transition-all cursor-pointer ${
+              filtroStock === 'normal'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold'
+                : 'bg-[#1B2237] text-emerald-400 border-[#222D46] hover:border-emerald-500/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Stock Normal ({countNormal})</span>
+          </button>
+
+          <button
+            onClick={() => cambiarFiltro('bajo')}
+            className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center space-x-1.5 transition-all cursor-pointer ${
+              filtroStock === 'bajo'
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                : 'bg-[#1B2237] text-amber-400 border-[#222D46] hover:border-amber-500/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span>Bajo Stock ({countBajo})</span>
+          </button>
+
+          <button
+            onClick={() => cambiarFiltro('agotado')}
+            className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center space-x-1.5 transition-all cursor-pointer ${
+              filtroStock === 'agotado'
+                ? 'bg-red-500 text-white border-red-400 font-bold'
+                : 'bg-[#1B2237] text-red-400 border-[#222D46] hover:border-red-500/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-red-400"></span>
+            <span>Agotado ({countAgotados})</span>
+          </button>
         </div>
       </div>
+
+      {/* Banner explicativo si está filtrado por Bajo Stock */}
+      {filtroStock === 'bajo' && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 flex items-center justify-between text-xs text-amber-300">
+          <div className="flex items-center space-x-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <span>
+              Mostrando únicamente los <strong>{countBajo} repuestos</strong> que han alcanzado o caído por debajo de su umbral mínimo configurado.
+            </span>
+          </div>
+          <button
+            onClick={() => cambiarFiltro('todos')}
+            className="text-xs underline text-amber-400 hover:text-amber-200 cursor-pointer"
+          >
+            Ver todos los repuestos
+          </button>
+        </div>
+      )}
 
       {/* Table matching screenshot */}
       <div className="bg-[#141A29] border border-[#222D46] rounded-xl overflow-hidden shadow-2xl">
@@ -171,7 +262,7 @@ export const Inventario: React.FC = () => {
               <th className="py-3 px-4 font-semibold">REPUESTO</th>
               <th className="py-3 px-4 font-semibold">DESCRIPCIÓN</th>
               <th className="py-3 px-4 font-semibold">PRECIO</th>
-              <th className="py-3 px-4 font-semibold text-center">STOCK</th>
+              <th className="py-3 px-4 font-semibold text-center">STOCK (ACTUAL / MÍN.)</th>
               <th className="py-3 px-4 font-semibold text-right">ACCIONES</th>
             </tr>
           </thead>
@@ -182,13 +273,22 @@ export const Inventario: React.FC = () => {
                   Cargando inventario...
                 </td>
               </tr>
-            ) : repuestos && repuestos.length > 0 ? (
-              repuestos.map((item) => {
+            ) : repuestosFiltrados && repuestosFiltrados.length > 0 ? (
+              repuestosFiltrados.map((item) => {
                 const isOut = item.stockActual <= 0;
                 const isLow = item.stockActual > 0 && item.stockActual <= item.stockMinimo;
 
                 return (
-                  <tr key={item.id} className="hover:bg-[#1B2237]/50 transition-colors">
+                  <tr
+                    key={item.id}
+                    className={`transition-colors ${
+                      isLow
+                        ? 'bg-amber-500/[0.04] hover:bg-amber-500/[0.08]'
+                        : isOut
+                        ? 'bg-red-500/[0.04] hover:bg-red-500/[0.08]'
+                        : 'hover:bg-[#1B2237]/50'
+                    }`}
+                  >
                     {/* Foto interactiva: Clic abre la vista previa en gran formato */}
                     <td className="py-3 px-4">
                       <div
@@ -231,19 +331,36 @@ export const Inventario: React.FC = () => {
 
                     <td className="py-3 px-4 text-slate-400 max-w-xs truncate">{item.descripcion || '---'}</td>
                     <td className="py-3 px-4 font-bold text-slate-100">${Number(item.precioFinal).toFixed(2)}</td>
+
+                    {/* Celda de Stock con Umbral Mínimo Explicativo */}
                     <td className="py-3 px-4 text-center">
-                      <span
-                        className={`inline-block font-extrabold px-2.5 py-1 rounded-md text-xs border ${
-                          isOut
-                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                            : isLow
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        }`}
-                      >
-                        {item.stockActual} un.
-                      </span>
+                      <div className="flex flex-col items-center">
+                        <span
+                          className={`inline-block font-extrabold px-2.5 py-1 rounded-md text-xs border ${
+                            isOut
+                              ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                              : isLow
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-sm'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          }`}
+                        >
+                          {item.stockActual} un.
+                        </span>
+                        <span className="text-[11px] text-slate-400 mt-1 flex items-center space-x-1">
+                          {isLow ? (
+                            <span className="text-amber-400 font-bold flex items-center space-x-0.5">
+                              <span>⚠️ Mín:</span>
+                              <strong>{item.stockMinimo}</strong>
+                            </span>
+                          ) : isOut ? (
+                            <span className="text-red-400 font-bold">Agotado</span>
+                          ) : (
+                            <span>Mín: {item.stockMinimo}</span>
+                          )}
+                        </span>
+                      </div>
                     </td>
+
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         {/* Botón Vista Previa / Ficha Detallada */}
@@ -292,7 +409,7 @@ export const Inventario: React.FC = () => {
             ) : (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-slate-500">
-                  No se encontraron productos en el inventario.
+                  No se encontraron productos con el filtro seleccionado.
                 </td>
               </tr>
             )}

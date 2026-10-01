@@ -56,6 +56,14 @@ export const Dashboard: React.FC = () => {
     },
   });
 
+  const { data: repuestosAlertas } = useQuery<any[]>({
+    queryKey: ['repuestos-alertas-dashboard'],
+    queryFn: async () => {
+      const res = await api.get('/repuestos/alertas-stock');
+      return res.data;
+    },
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Title */}
@@ -122,40 +130,75 @@ export const Dashboard: React.FC = () => {
           <p className="text-[11px] text-slate-500 mt-3">Ventas y servicios completados</p>
         </div>
 
-        <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl relative overflow-hidden">
+        <Link
+          to="/inventario?filtro=bajo"
+          className="bg-[#141A29] hover:bg-[#182033] border border-[#222D46] hover:border-red-500/40 rounded-xl p-6 shadow-xl relative overflow-hidden transition-all group cursor-pointer block"
+          title="Ver repuestos bajo stock en Inventario"
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Alertas Bajo Stock</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider group-hover:text-red-400 transition-colors">Alertas Bajo Stock</p>
               <h3 className="text-2xl font-extrabold text-red-400 mt-2">
                 {isLoading ? '...' : summary?.repuestosBajoStock}
               </h3>
             </div>
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 group-hover:scale-105 transition-transform">
               <AlertTriangle className="w-6 h-6" />
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 mt-3">Items ≤ Umbral mínimo de stock</p>
-        </div>
+          <p className="text-[11px] text-slate-500 mt-3 group-hover:text-slate-400">Items ≤ Umbral mínimo de stock →</p>
+        </Link>
       </div>
 
-      {/* Low Stock Banner Alert */}
+      {/* Low Stock Banner Alert con desglose directo de productos */}
       {summary && summary.repuestosBajoStock > 0 && (
-        <div className="bg-red-950/40 border border-red-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-red-200 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <AlertTriangle className="w-6 h-6 text-red-400 shrink-0" />
-            <div>
-              <h4 className="font-bold text-sm">Alerta Inteligente de Reabastecimiento</h4>
-              <p className="text-xs text-red-300/80">
-                Hay {summary.repuestosBajoStock} repuestos con stock por debajo o igual al umbral mínimo parametrizado.
-              </p>
+        <div className="bg-gradient-to-r from-red-950/50 via-[#141A29] to-[#141A29] border border-red-500/50 rounded-xl p-5 shadow-2xl space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center space-x-3">
+              <div className="p-2.5 bg-red-500/20 border border-red-500/40 rounded-xl text-red-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-red-200 flex items-center gap-2">
+                  Alerta Inteligente de Reabastecimiento
+                  <span className="text-[11px] bg-red-500/30 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-full font-mono">
+                    {summary.repuestosBajoStock} {summary.repuestosBajoStock === 1 ? 'ítem crítico' : 'ítems críticos'}
+                  </span>
+                </h4>
+                <p className="text-xs text-red-300/80 mt-0.5">
+                  Productos cuyo stock actual es menor o igual al umbral mínimo de seguridad parametrizado:
+                </p>
+              </div>
             </div>
+            <Link
+              to="/inventario?filtro=bajo"
+              className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg whitespace-nowrap transition-all shadow-md hover:shadow-red-500/20 flex items-center space-x-1.5 shrink-0 self-end sm:self-center"
+            >
+              <span>Ver en Inventario</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            to="/inventario"
-            className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg whitespace-nowrap transition-colors"
-          >
-            Revisar Inventario
-          </Link>
+
+          {/* Desglose de repuestos bajo stock */}
+          {repuestosAlertas && repuestosAlertas.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-2 border-t border-red-500/20">
+              {repuestosAlertas.map((item: any) => (
+                <div
+                  key={item.id}
+                  className="bg-[#1B2237]/80 border border-red-500/30 rounded-lg p-2.5 flex items-center justify-between text-xs"
+                >
+                  <div className="truncate mr-2">
+                    <span className="font-mono text-[10px] text-amber-400 font-bold block">{item.codigo}</span>
+                    <span className="text-slate-200 font-medium truncate block">{item.nombre}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-red-400 font-bold block">{item.stockActual} un.</span>
+                    <span className="text-[10px] text-slate-400 block">Mín: {item.stockMinimo}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
