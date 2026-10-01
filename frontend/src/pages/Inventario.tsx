@@ -4,21 +4,26 @@ import {
   Search,
   FileSpreadsheet,
   PlusCircle,
+  Plus,
   Edit2,
   Trash2,
   Image as ImageIcon,
   AlertCircle,
   PackageCheck
 } from 'lucide-react';
-import api, { API_BASE_URL } from '../services/api';
+import api, { downloadExcelFile } from '../services/api';
 import { Repuesto } from '../types';
 import { EntradaModal } from '../components/EntradaModal';
+import { ProductoModal } from '../components/ProductoModal';
 import Swal from 'sweetalert2';
 
 export const Inventario: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedRepuestoEntrada, setSelectedRepuestoEntrada] = useState<Repuesto | null>(null);
+  const [selectedRepuestoEdit, setSelectedRepuestoEdit] = useState<Repuesto | null>(null);
+  const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: repuestos, isLoading } = useQuery<Repuesto[]>({
     queryKey: ['inventario-stock', search],
@@ -34,6 +39,8 @@ export const Inventario: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['repuestos-catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       Swal.fire({ icon: 'success', title: 'Repuesto Eliminado', timer: 1500, showConfirmButton: false });
     },
     onError: (err: any) => {
@@ -62,24 +69,60 @@ export const Inventario: React.FC = () => {
     });
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      setIsDownloading(true);
+      await downloadExcelFile('/reportes/exportar-inventario', 'Lubripoint_Inventario.xlsx');
+      Swal.fire({
+        icon: 'success',
+        title: 'Descarga Iniciada',
+        text: 'El inventario se ha descargado exitosamente en formato Excel.',
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Descarga',
+        text: 'No se pudo descargar el archivo Excel. Verifica tu sesión.',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Title Header */}
+      {/* Title Header with Action Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#FFB800]">Inventario / Stock</h1>
-          <p className="text-xs sm:text-sm text-slate-400">Consulta de existencias en tiempo real e identificadores visuales</p>
+          <p className="text-xs sm:text-sm text-slate-400">Consulta de existencias en tiempo real, registro y edición de repuestos</p>
         </div>
 
-        <a
-          href={`${API_BASE_URL}/reportes/exportar-inventario`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Descargar Inventario</span>
-        </a>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Botón para Registrar Nuevo Producto */}
+          <button
+            onClick={() => {
+              setSelectedRepuestoEdit(null);
+              setIsProductoModalOpen(true);
+            }}
+            className="bg-[#FFB800] hover:bg-[#E6A600] text-slate-950 font-extrabold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Registrar Producto</span>
+          </button>
+
+          {/* Botón para Descargar Excel con JWT autenticado */}
+          <button
+            onClick={handleDownloadExcel}
+            disabled={isDownloading}
+            className="bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer disabled:opacity-50"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>{isDownloading ? 'Descargando...' : 'Descargar Inventario'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar matching screenshot */}
@@ -113,38 +156,40 @@ export const Inventario: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Stock Table matching screenshot */}
-      <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl overflow-x-auto">
-        <table className="w-full text-left text-xs text-slate-300">
-          <thead className="bg-[#1B2237] text-slate-400 uppercase tracking-wider border-b border-[#222D46]">
-            <tr>
-              <th className="py-3 px-4">IMG</th>
-              <th className="py-3 px-4">CÓDIGO</th>
-              <th className="py-3 px-4">PRODUCTO</th>
-              <th className="py-3 px-4">DESCRIPCIÓN</th>
-              <th className="py-3 px-4">PRECIO</th>
-              <th className="py-3 px-4 text-center">STOCK</th>
-              <th className="py-3 px-4 text-right">ACCIONES</th>
+      {/* Table matching screenshot */}
+      <div className="bg-[#141A29] border border-[#222D46] rounded-xl overflow-hidden shadow-2xl">
+        <table className="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr className="bg-[#1B2237] text-slate-400 border-b border-[#222D46]">
+              <th className="py-3 px-4 font-semibold">FOTO</th>
+              <th className="py-3 px-4 font-semibold">CÓDIGO</th>
+              <th className="py-3 px-4 font-semibold">REPUESTO</th>
+              <th className="py-3 px-4 font-semibold">DESCRIPCIÓN</th>
+              <th className="py-3 px-4 font-semibold">PRECIO</th>
+              <th className="py-3 px-4 font-semibold text-center">STOCK</th>
+              <th className="py-3 px-4 font-semibold text-right">ACCIONES</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#222D46]">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400">Cargando inventario de repuestos...</td>
+                <td colSpan={7} className="py-8 text-center text-slate-500">
+                  Cargando inventario...
+                </td>
               </tr>
             ) : repuestos && repuestos.length > 0 ? (
               repuestos.map((item) => {
                 const isOut = item.stockActual <= 0;
-                const isLow = item.stockActual <= item.stockMinimo;
+                const isLow = item.stockActual > 0 && item.stockActual <= item.stockMinimo;
 
                 return (
-                  <tr key={item.id} className="hover:bg-[#1B2237]/40 transition-colors">
+                  <tr key={item.id} className="hover:bg-[#1B2237]/50 transition-colors">
                     <td className="py-3 px-4">
                       {item.imagenUrl ? (
                         <img
                           src={item.imagenUrl}
                           alt={item.nombre}
-                          className="w-10 h-10 object-cover rounded-lg border border-[#222D46]"
+                          className="w-10 h-10 rounded-lg object-cover border border-[#222D46]"
                         />
                       ) : (
                         <div className="w-10 h-10 bg-[#1B2237] rounded-lg border border-[#222D46] flex items-center justify-center text-slate-500">
@@ -171,6 +216,7 @@ export const Inventario: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Entrada de Stock */}
                         <button
                           onClick={() => setSelectedRepuestoEntrada(item)}
                           title="Entrada de Stock"
@@ -178,6 +224,18 @@ export const Inventario: React.FC = () => {
                         >
                           <PlusCircle className="w-4 h-4" />
                         </button>
+                        {/* Editar Producto */}
+                        <button
+                          onClick={() => {
+                            setSelectedRepuestoEdit(item);
+                            setIsProductoModalOpen(true);
+                          }}
+                          title="Editar Repuesto"
+                          className="p-1.5 bg-[#1B2237] hover:bg-blue-500/20 text-blue-400 rounded-md border border-[#222D46] transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {/* Eliminar Producto */}
                         <button
                           onClick={() => handleDelete(item)}
                           title="Eliminar Repuesto"
@@ -201,11 +259,30 @@ export const Inventario: React.FC = () => {
         </table>
       </div>
 
-      {/* Entrada Modal */}
+      {/* Modal para Entrada de Stock */}
       <EntradaModal
         repuesto={selectedRepuestoEntrada}
         onClose={() => setSelectedRepuestoEntrada(null)}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['inventario-stock'] })}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+        }}
+      />
+
+      {/* Modal para Crear y Editar Producto */}
+      <ProductoModal
+        isOpen={isProductoModalOpen}
+        onClose={() => {
+          setIsProductoModalOpen(false);
+          setSelectedRepuestoEdit(null);
+        }}
+        repuestoToEdit={selectedRepuestoEdit}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
+          queryClient.invalidateQueries({ queryKey: ['repuestos-catalog'] });
+          queryClient.invalidateQueries({ queryKey: ['repuestos'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+        }}
       />
     </div>
   );

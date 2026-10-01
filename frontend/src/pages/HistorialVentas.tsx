@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileSpreadsheet, FileText, Phone, Printer } from 'lucide-react';
-import api, { API_BASE_URL } from '../services/api';
+import api, { downloadExcelFile } from '../services/api';
 import { Orden } from '../types';
 import { ReceiptModal } from '../components/ReceiptModal';
 import dayjs from 'dayjs';
+import Swal from 'sweetalert2';
 
 export const HistorialVentas: React.FC = () => {
   const [selectedOrden, setSelectedOrden] = useState<Orden | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: ordenes, isLoading } = useQuery<Orden[]>({
     queryKey: ['ordenes-historial'],
@@ -16,6 +18,28 @@ export const HistorialVentas: React.FC = () => {
       return res.data;
     },
   });
+
+  const handleDownloadExcel = async () => {
+    try {
+      setIsDownloading(true);
+      await downloadExcelFile('/reportes/exportar-ventas', 'Lubripoint_Historial_Ventas.xlsx');
+      Swal.fire({
+        icon: 'success',
+        title: 'Descarga Iniciada',
+        text: 'El historial de ventas se descargó correctamente en formato Excel.',
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Descarga',
+        text: 'No se pudo descargar el reporte de ventas.',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -26,15 +50,14 @@ export const HistorialVentas: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-400">Registro completo de transacciones</p>
         </div>
 
-        <a
-          href={`${API_BASE_URL}/reportes/exportar-ventas`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer"
+        <button
+          onClick={handleDownloadExcel}
+          disabled={isDownloading}
+          className="bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer disabled:opacity-50"
         >
           <FileSpreadsheet className="w-4 h-4" />
-          <span>Descargar Excel</span>
-        </a>
+          <span>{isDownloading ? 'Descargando...' : 'Descargar Excel'}</span>
+        </button>
       </div>
 
       {/* Main Table matching screenshot */}

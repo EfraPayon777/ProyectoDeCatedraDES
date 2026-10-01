@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -11,10 +11,13 @@ import {
   FileSpreadsheet,
   ArrowUpRight
 } from 'lucide-react';
-import api, { API_BASE_URL } from '../services/api';
+import api, { downloadExcelFile } from '../services/api';
 import { DashboardSummary } from '../types';
+import Swal from 'sweetalert2';
 
 export const Dashboard: React.FC = () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
     queryKey: ['dashboard-summary'],
     queryFn: async () => {
@@ -22,6 +25,28 @@ export const Dashboard: React.FC = () => {
       return res.data;
     },
   });
+
+  const handleDownloadExcel = async () => {
+    try {
+      setIsDownloading(true);
+      await downloadExcelFile('/reportes/exportar-inventario', 'Lubripoint_Inventario.xlsx');
+      Swal.fire({
+        icon: 'success',
+        title: 'Descarga Iniciada',
+        text: 'El inventario se ha descargado correctamente en formato Excel.',
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Descarga',
+        text: 'No se pudo descargar el reporte de inventario.',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const { data: piezasTop } = useQuery({
     queryKey: ['piezas-mas-usadas'],
@@ -171,23 +196,24 @@ export const Dashboard: React.FC = () => {
             <ArrowUpRight className="w-5 h-5 text-slate-500 group-hover:text-[#FFB800] transition-colors" />
           </Link>
 
-          <a
-            href={`${API_BASE_URL}/reportes/exportar-inventario`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full bg-[#1B2237] hover:bg-[#26314D] border border-[#222D46] rounded-xl p-4 flex items-center justify-between text-slate-200 transition-all group"
+          <button
+            onClick={handleDownloadExcel}
+            disabled={isDownloading}
+            className="w-full bg-[#1B2237] hover:bg-[#26314D] border border-[#222D46] rounded-xl p-4 flex items-center justify-between text-slate-200 transition-all group cursor-pointer disabled:opacity-50"
           >
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
                 <FileSpreadsheet className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-sm">Descargar Excel Inventario</p>
+                <p className="font-semibold text-sm">
+                  {isDownloading ? 'Descargando Excel...' : 'Descargar Excel Inventario'}
+                </p>
                 <p className="text-xs text-slate-400">Exportar catálogo completo</p>
               </div>
             </div>
             <ArrowUpRight className="w-5 h-5 text-slate-500 group-hover:text-[#FFB800] transition-colors" />
-          </a>
+          </button>
         </div>
 
         {/* Top Used Parts */}

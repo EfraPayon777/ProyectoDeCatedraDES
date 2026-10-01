@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CategoriasService } from './categorias.service';
 import { CreateCategoriaDto } from './dto/create-categoria.dto';
@@ -25,6 +25,18 @@ export class CategoriasController {
   @Post()
   async create(@Body() createDto: CreateCategoriaDto) {
     return this.categoriasService.create(createDto);
+  }
+
+  @ApiOperation({ summary: 'Actualizar una categoría existente por ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.JEFE_PISTA)
+  @ApiBearerAuth()
+  @Put(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: CreateCategoriaDto,
+  ) {
+    return this.categoriasService.update(id, updateDto);
   }
 
   @ApiOperation({ summary: 'Eliminar categoría por ID' })

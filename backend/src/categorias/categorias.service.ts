@@ -32,6 +32,18 @@ export class CategoriasService {
     return this.categoriaRepository.save(nueva);
   }
 
+  async update(id: number, updateDto: CreateCategoriaDto): Promise<Categoria> {
+    const categoria = await this.findOne(id);
+    if (updateDto.nombre && updateDto.nombre.trim() !== categoria.nombre) {
+      const existing = await this.categoriaRepository.findOne({ where: { nombre: updateDto.nombre.trim() } });
+      if (existing && existing.id !== id) {
+        throw new ConflictException('Ya existe otra categoría con este nombre');
+      }
+      categoria.nombre = updateDto.nombre.trim();
+    }
+    return this.categoriaRepository.save(categoria);
+  }
+
   async remove(id: number): Promise<void> {
     const categoria = await this.findOne(id);
     await this.categoriaRepository.remove(categoria);

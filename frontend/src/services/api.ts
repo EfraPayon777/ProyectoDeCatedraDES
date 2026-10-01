@@ -37,4 +37,24 @@ api.interceptors.response.use(
   },
 );
 
+export const downloadExcelFile = async (endpoint: string, defaultFilename: string) => {
+  try {
+    const response = await api.get(endpoint, { responseType: 'blob' });
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', defaultFilename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error: any) {
+    console.error('Error al descargar reporte:', error);
+    throw error;
+  }
+};
+
 export default api;
