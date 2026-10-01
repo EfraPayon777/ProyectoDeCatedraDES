@@ -33,10 +33,12 @@ const dbType = process.env.DB_TYPE || 'sqlite';
         if (isPostgres) {
           if (databaseUrl) {
             const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+            const isInternalRender = databaseUrl.includes('dpg-') && !databaseUrl.includes('.');
+            const needsSsl = !isLocal && !isInternalRender && process.env.DB_SSL !== 'false';
             return {
               type: 'postgres',
               url: databaseUrl,
-              ssl: isLocal || process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+              ssl: needsSsl ? { rejectUnauthorized: false } : false,
               entities: [Usuario, Categoria, Repuesto, EntradaInventario, Orden, DetalleOrden],
               synchronize: true, // Para desarrollo y cátedra
             };
