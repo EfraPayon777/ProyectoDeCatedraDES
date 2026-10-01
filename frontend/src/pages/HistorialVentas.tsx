@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileSpreadsheet, FileText, Phone, Printer } from 'lucide-react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { Orden } from '../types';
 import { ReceiptModal } from '../components/ReceiptModal';
 import dayjs from 'dayjs';
@@ -27,7 +27,7 @@ export const HistorialVentas: React.FC = () => {
         </div>
 
         <a
-          href="http://localhost:3000/api/reportes/exportar-ventas"
+          href={`${API_BASE_URL}/reportes/exportar-ventas`}
           target="_blank"
           rel="noopener noreferrer"
           className="bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer"

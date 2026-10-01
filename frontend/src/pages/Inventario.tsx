@@ -10,7 +10,7 @@ import {
   AlertCircle,
   PackageCheck
 } from 'lucide-react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { Repuesto } from '../types';
 import { EntradaModal } from '../components/EntradaModal';
 import Swal from 'sweetalert2';
@@ -72,7 +72,7 @@ export const Inventario: React.FC = () => {
         </div>
 
         <a
-          href="http://localhost:3000/api/reportes/exportar-inventario"
+          href={`${API_BASE_URL}/reportes/exportar-inventario`}
           target="_blank"
           rel="noopener noreferrer"
           className="bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg cursor-pointer"

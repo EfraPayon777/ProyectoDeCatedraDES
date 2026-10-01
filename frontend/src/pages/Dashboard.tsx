@@ -11,7 +11,7 @@ import {
   FileSpreadsheet,
   ArrowUpRight
 } from 'lucide-react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { DashboardSummary } from '../types';
 
 export const Dashboard: React.FC = () => {
@@ -172,7 +172,7 @@ export const Dashboard: React.FC = () => {
           </Link>
 
           <a
-            href="http://localhost:3000/api/reportes/exportar-inventario"
+            href={`${API_BASE_URL}/reportes/exportar-inventario`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full bg-[#1B2237] hover:bg-[#26314D] border border-[#222D46] rounded-xl p-4 flex items-center justify-between text-slate-200 transition-all group"
