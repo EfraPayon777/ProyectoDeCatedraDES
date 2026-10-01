@@ -32,10 +32,11 @@ const dbType = process.env.DB_TYPE || 'sqlite';
 
         if (isPostgres) {
           if (databaseUrl) {
+            const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
             return {
               type: 'postgres',
               url: databaseUrl,
-              ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+              ssl: isLocal || process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
               entities: [Usuario, Categoria, Repuesto, EntradaInventario, Orden, DetalleOrden],
               synchronize: true, // Para desarrollo y cátedra
             };
