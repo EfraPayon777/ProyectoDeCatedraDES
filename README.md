@@ -153,11 +153,36 @@ Los principales recursos provistos por el backend son:
 
 ## 9. Declaración de Uso de Inteligencia Artificial
 
-En cumplimiento con los lineamientos de la asignatura sobre el uso de herramientas de inteligencia artificial:
+En cumplimiento con los lineamientos éticos y académicos de la cátedra de Desarrollo de Software Empresarial de la Universidad Don Bosco (UDB):
 
-> "Declaramos que el equipo de trabajo utilizó herramientas de inteligencia artificial como apoyo para la consulta de conceptos técnicos, depuración de errores de configuración en TypeScript y revisión de la redacción técnica del proyecto. El diseño de la arquitectura, la estructura de la base de datos relacional y la implementación de la lógica de negocio fueron desarrollados, revisados y validados en su totalidad por los integrantes del equipo."
+> "Declaramos que el equipo de trabajo utilizó herramientas de inteligencia artificial exclusivamente como asistente de consulta técnica, apoyo en la depuración de errores específicos en tiempo de ejecución, optimización de transacciones en base de datos y revisión de redacción técnica. La concepción de la arquitectura, la modelación de datos relacionales, la estructura del frontend en React y la validación de la lógica de negocio fueron desarrolladas, ensambladas y verificadas directamente por los integrantes del equipo."
 
-### Prompt de Referencia Utilizado:
+### Registro de Prompts de Consulta, Depuración y Refactorización Iterativa
+
+A continuación se documentan los principales requerimientos técnicos y prompts puntuales formulados durante el ciclo de vida del proyecto para solventar incidencias específicas:
+
+#### Prompt 1: Manejo de Transacciones y Rollback en TypeORM (Backend)
 ```text
-"Ayúdame a diseñar la arquitectura en NestJS con TypeORM para un sistema de inventario y órdenes de trabajo automotriz. Se requiere que al emitir una orden de trabajo se valide el stock disponible de cada repuesto y se descuenten las existencias dentro de una transacción con rollback automático si no hay suficiente stock."
+"Revisa la lógica del servicio de órdenes en NestJS con TypeORM. Necesito implementar QueryRunner para que al registrar una orden de trabajo se valide la disponibilidad física de cada repuesto y se descuenten las existencias dentro de una transacción explícita, asegurando que se ejecute rollback automático en caso de que algún repuesto no cuente con suficiente stock o falle la conexión a la base de datos."
 ```
+
+#### Prompt 2: Solución al Error 413 (Payload Too Large) y Compresión de Imágenes
+```text
+"Al subir fotografías de repuestos desde el formulario de inventario, el servidor rechaza la petición con código HTTP 413 Payload Too Large. ¿Cómo puedo aumentar el límite del body-parser en NestJS a 25MB y al mismo tiempo implementar en React una función con HTML5 Canvas para redimensionar y comprimir las imágenes en el cliente antes de ser enviadas?"
+```
+
+#### Prompt 3: Descarga Segura de Reportes Excel con Cabeceras JWT
+```text
+"Los endpoints de exportación /reportes/exportar-inventario y /reportes/exportar-ventas están protegidos por JwtAuthGuard. Al intentar descargarlos mediante un enlace HTML convencional el navegador recibe 401 Unauthorized por falta del token Bearer. Proporciona una función auxiliar en TypeScript con Axios que envíe la cabecera Authorization, reciba el flujo binario como Blob y genere la descarga en el navegador con extensión .xlsx."
+```
+
+#### Prompt 4: Refactorización de Interfaz y Clarificación de Umbrales de Stock (UX)
+```text
+"En el dashboard se reporta una alerta de bajo stock con 1 ítem, pero al revisar la tabla de inventario el usuario no puede determinar fácilmente cuál es el repuesto afectado porque solo se visualiza la cantidad actual. Modifica la tabla para mostrar tanto el stock actual como el stockMinimo parametrizado, añade pestañas de filtrado rápido por estado (Normal, Bajo Stock, Agotado) y permite que al hacer clic en la alerta del dashboard la tabla se filtre automáticamente."
+```
+
+#### Prompt 5: Documentación de Parámetros y Respuestas en Swagger (OpenAPI)
+```text
+"Varios endpoints en Swagger UI no reflejan los parámetros de búsqueda por query string ni los códigos de respuesta esperados. Ayúdame a anotar los métodos del controlador de repuestos con los decoradores @ApiQuery(), @ApiParam(), @ApiResponse() y @ApiBearerAuth() para que la documentación interactiva exponga adecuadamente los contratos de la API."
+```
+
