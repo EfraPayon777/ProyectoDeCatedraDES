@@ -8,9 +8,8 @@ import {
   Trash2,
   CheckCircle,
   Wrench,
-  User,
   Car,
-  FileText
+  Image as ImageIcon
 } from 'lucide-react';
 import api from '../services/api';
 import { Repuesto, Orden } from '../types';
@@ -29,7 +28,6 @@ export const NuevaVenta: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [descuento, setDescuento] = useState<number>(0);
 
-  // Datos del vehículo y cliente
   const [placa, setPlaca] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
@@ -37,7 +35,6 @@ export const NuevaVenta: React.FC = () => {
   const [clienteTelefono, setClienteTelefono] = useState('');
   const [descripcionFalla, setDescripcionFalla] = useState('');
 
-  // Estado para modal de impresión
   const [createdOrden, setCreatedOrden] = useState<Orden | null>(null);
 
   const { data: repuestos, isLoading } = useQuery<Repuesto[]>({
@@ -52,8 +49,8 @@ export const NuevaVenta: React.FC = () => {
     if (repuesto.stockActual <= 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'Sin Stock',
-        text: `El repuesto "${repuesto.nombre}" está agotado.`,
+        title: 'Sin existencias',
+        text: `El artículo "${repuesto.nombre}" no cuenta con unidades disponibles.`,
       });
       return;
     }
@@ -64,8 +61,8 @@ export const NuevaVenta: React.FC = () => {
         if (existing.cantidad >= repuesto.stockActual) {
           Swal.fire({
             icon: 'info',
-            title: 'Límite de Stock',
-            text: `No puede agregar más de ${repuesto.stockActual} unidades en existencia.`,
+            title: 'Límite de stock alcanzado',
+            text: `Solo hay ${repuesto.stockActual} unidades disponibles en inventario.`,
           });
           return prev;
         }
@@ -88,8 +85,8 @@ export const NuevaVenta: React.FC = () => {
             if (newQty > item.repuesto.stockActual) {
               Swal.fire({
                 icon: 'info',
-                title: 'Límite de Stock',
-                text: `Stock máximo disponible: ${item.repuesto.stockActual} un.`,
+                title: 'Límite de existencias',
+                text: `Existencia física máxima: ${item.repuesto.stockActual} unidades.`,
               });
               return item;
             }
@@ -129,18 +126,18 @@ export const NuevaVenta: React.FC = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['repuestos-catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
 
       Swal.fire({
         icon: 'success',
-        title: '¡Orden Emitida con Éxito!',
-        text: `Comprobante ${data.codigoOrden} generado.`,
-        timer: 1500,
+        title: 'Orden registrada',
+        text: `Comprobante ${data.codigoOrden} generado satisfactoriamente.`,
+        timer: 1600,
         showConfirmButton: false,
       });
 
       setCreatedOrden(data);
-      // Reset Form
       setCart([]);
       setPlaca('');
       setMarca('');
@@ -153,8 +150,8 @@ export const NuevaVenta: React.FC = () => {
     onError: (err: any) => {
       Swal.fire({
         icon: 'error',
-        title: 'Error al emitir orden',
-        text: err.response?.data?.message || 'Revise la conexión o datos ingresados',
+        title: 'No se pudo emitir la orden',
+        text: err.response?.data?.message || 'Verifique que las cantidades no superen el stock disponible.',
       });
     },
   });
@@ -162,11 +159,11 @@ export const NuevaVenta: React.FC = () => {
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) {
-      Swal.fire({ icon: 'error', title: 'Lista Vacía', text: 'Debe agregar al menos 1 repuesto a la orden' });
+      Swal.fire({ icon: 'warning', title: 'Orden vacía', text: 'Debe agregar al menos un repuesto para procesar la orden.' });
       return;
     }
     if (!placa || !marca || !modelo || !clienteNombre) {
-      Swal.fire({ icon: 'warning', title: 'Campos requeridos', text: 'Por favor ingrese la placa, marca, modelo y cliente.' });
+      Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Por favor ingrese la placa, marca, modelo y nombre del cliente.' });
       return;
     }
     createOrderMutation.mutate();
@@ -174,208 +171,211 @@ export const NuevaVenta: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#00C897]">Facturación / Nueva Orden</h1>
-          <p className="text-xs sm:text-sm text-slate-400">Seleccione repuestos, registre los datos del vehículo y emita el comprobante</p>
-        </div>
+      <div className="pb-2 border-b border-slate-800/60">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Facturación y Órdenes de Trabajo</h1>
+        <p className="text-xs text-slate-400 mt-0.5">Emisión de órdenes, asignación de repuestos con salida automática de inventario</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Product Search Catalog & Vehicle Form */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Vehicle & Customer Form */}
-          <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-base text-[#FFB800] flex items-center space-x-2">
-              <Car className="w-5 h-5" />
-              <span>Datos del Vehículo y Cliente</span>
-            </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-5">
+          <div className="bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-3.5">
+            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200 pb-2 border-b border-slate-800">
+              <Car className="w-4 h-4 text-amber-400" />
+              <span>Identificación del Vehículo y Cliente</span>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Placa *</label>
+                <label className="block text-slate-300 font-medium mb-1">Placa del Vehículo *</label>
                 <input
                   type="text"
-                  placeholder="Ej: P-123456"
+                  placeholder="Ej: P-234567"
                   value={placa}
                   onChange={(e) => setPlaca(e.target.value)}
-                  className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#00C897]"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono uppercase"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Marca *</label>
+                <label className="block text-slate-300 font-medium mb-1">Marca *</label>
                 <input
                   type="text"
                   placeholder="Ej: Toyota"
                   value={marca}
                   onChange={(e) => setMarca(e.target.value)}
-                  className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#00C897]"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Modelo *</label>
+                <label className="block text-slate-300 font-medium mb-1">Modelo y Año *</label>
                 <input
                   type="text"
-                  placeholder="Ej: Corolla 2020"
+                  placeholder="Ej: Corolla 2021"
                   value={modelo}
                   onChange={(e) => setModelo(e.target.value)}
-                  className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#00C897]"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Nombre del Cliente *</label>
+                <label className="block text-slate-300 font-medium mb-1">Propietario / Cliente *</label>
                 <input
                   type="text"
-                  placeholder="Ej: Efrain Antonio"
+                  placeholder="Nombre completo"
                   value={clienteNombre}
                   onChange={(e) => setClienteNombre(e.target.value)}
-                  className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#00C897]"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Teléfono Cliente</label>
+                <label className="block text-slate-300 font-medium mb-1">Teléfono de Contacto</label>
                 <input
                   type="text"
                   placeholder="Ej: 7788-9900"
                   value={clienteTelefono}
                   onChange={(e) => setClienteTelefono(e.target.value)}
-                  className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#00C897]"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                 />
               </div>
             </div>
 
             <div className="text-xs">
-              <label className="block text-slate-300 font-semibold mb-1">Descripción del Trabajo / Falla</label>
+              <label className="block text-slate-300 font-medium mb-1">Detalle de Trabajo o Servicio Realizado</label>
               <textarea
-                placeholder="Ej: Cambio de aceite sintético 5W-30 y filtro de aceite..."
+                placeholder="Ej: Mantenimiento preventivo, cambio de aceite 10W-30 y filtro de motor..."
                 value={descripcionFalla}
                 onChange={(e) => setDescripcionFalla(e.target.value)}
                 rows={2}
-                className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#00C897]"
+                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
               />
             </div>
           </div>
 
-          {/* Product Catalog Search */}
-          <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h3 className="font-bold text-base text-white flex items-center space-x-2">
-                <Wrench className="w-5 h-5 text-[#FFB800]" />
-                <span>Seleccionar Repuestos del Catálogo</span>
-              </h3>
+          <div className="bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+                <Wrench className="w-4 h-4 text-amber-400" />
+                <span>Catálogo de Repuestos Disponibles</span>
+              </div>
 
               <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por código o nombre..."
+                  placeholder="Buscar repuesto..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#FFB800]"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                 />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
               </div>
             </div>
 
-            {/* Repuestos Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
               {isLoading ? (
-                <div className="col-span-2 text-center py-8 text-slate-400 text-xs">Cargando catálogo...</div>
+                <div className="col-span-2 text-center py-8 text-slate-500 text-xs">Cargando catálogo...</div>
               ) : repuestos && repuestos.length > 0 ? (
                 repuestos.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-[#1B2237] border border-[#222D46] hover:border-[#00C897]/50 rounded-lg p-3 flex justify-between items-center transition-all group"
+                    className="bg-[#182032] border border-slate-800 hover:border-slate-700 rounded-lg p-3 flex items-center justify-between transition-all"
                   >
-                    <div>
-                      <span className="text-[10px] font-bold text-[#FFB800] bg-[#141A29] px-2 py-0.5 rounded border border-[#FFB800]/20">
-                        {item.codigo}
-                      </span>
-                      <h4 className="font-semibold text-xs text-white mt-1 group-hover:text-[#00C897] transition-colors">
-                        {item.nombre}
-                      </h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Stock: <span className={item.stockActual <= item.stockMinimo ? 'text-red-400 font-bold' : 'text-emerald-400'}>{item.stockActual} un.</span>
-                      </p>
-                      <p className="text-sm font-extrabold text-white mt-1">
-                        ${Number(item.precioFinal).toFixed(2)}
-                      </p>
+                    <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                      <div className="w-9 h-9 rounded bg-[#111726] border border-slate-700/80 flex items-center justify-center shrink-0 overflow-hidden">
+                        {item.imagenUrl ? (
+                          <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-mono text-[10px] text-amber-400 font-semibold block leading-tight">
+                          {item.codigo}
+                        </span>
+                        <h4 className="font-medium text-xs text-slate-100 truncate mt-0.5">
+                          {item.nombre}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] font-mono font-bold text-slate-200">
+                            ${Number(item.precioFinal).toFixed(2)}
+                          </span>
+                          <span className={`text-[10px] font-mono font-medium ${item.stockActual <= item.stockMinimo ? 'text-amber-400' : 'text-slate-400'}`}>
+                            Stock: {item.stockActual}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <button
                       onClick={() => addToCart(item)}
                       disabled={item.stockActual <= 0}
-                      className="bg-[#00C897] hover:bg-[#00B084] disabled:bg-slate-700 text-slate-950 font-bold text-xs px-3 py-2 rounded-lg flex items-center space-x-1 transition-colors cursor-pointer"
+                      className="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold text-xs px-2.5 py-1.5 rounded-md flex items-center space-x-1 shrink-0 transition-colors cursor-pointer"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                       <span>Agregar</span>
                     </button>
                   </div>
                 ))
               ) : (
                 <div className="col-span-2 text-center py-8 text-slate-500 text-xs">
-                  No se encontraron repuestos con el criterio especificado.
+                  No se encontraron repuestos con los criterios de búsqueda.
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Order Summary & Cart */}
-        <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl flex flex-col justify-between space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-[#222D46] pb-3">
-              <h3 className="font-bold text-lg text-white flex items-center space-x-2">
-                <ShoppingCart className="w-5 h-5 text-[#00C897]" />
-                <span>Resumen de Orden</span>
-              </h3>
-              <span className="text-xs bg-[#1B2237] text-slate-300 px-2.5 py-1 rounded-full font-semibold border border-[#222D46]">
-                {cart.length} items
+        <div className="bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+                <ShoppingCart className="w-4 h-4 text-amber-400" />
+                <span>Detalle de Orden</span>
+              </div>
+              <span className="text-[11px] bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded font-semibold border border-slate-700">
+                {cart.length} {cart.length === 1 ? 'línea' : 'líneas'}
               </span>
             </div>
 
-            {/* Cart List */}
-            <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
               {cart.length > 0 ? (
                 cart.map((item) => (
                   <div
                     key={item.repuesto.id}
-                    className="bg-[#1B2237] p-3 rounded-lg border border-[#222D46] flex items-center justify-between text-xs"
+                    className="bg-[#182032] p-2.5 rounded-lg border border-slate-800 flex items-center justify-between text-xs"
                   >
-                    <div className="flex-1 pr-2">
-                      <p className="font-bold text-white line-clamp-1">{item.repuesto.nombre}</p>
-                      <p className="text-[11px] text-slate-400">
-                        ${Number(item.precioUnitario).toFixed(2)} x {item.cantidad} ={' '}
-                        <span className="text-emerald-400 font-bold">${(item.precioUnitario * item.cantidad).toFixed(2)}</span>
+                    <div className="flex-1 pr-2 truncate">
+                      <p className="font-medium text-slate-200 truncate">{item.repuesto.nombre}</p>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        ${Number(item.precioUnitario).toFixed(2)} × {item.cantidad} ={' '}
+                        <span className="text-slate-200 font-semibold">${(item.precioUnitario * item.cantidad).toFixed(2)}</span>
                       </p>
                     </div>
 
                     <div className="flex items-center space-x-1">
                       <button
                         onClick={() => updateQuantity(item.repuesto.id, -1)}
-                        className="p-1 bg-[#141A29] hover:bg-[#26314D] text-slate-300 rounded cursor-pointer"
+                        className="w-5 h-5 bg-[#111726] hover:bg-slate-700 text-slate-300 rounded flex items-center justify-center cursor-pointer"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
-                      <span className="font-bold px-1.5 text-white">{item.cantidad}</span>
+                      <span className="font-mono font-bold text-xs px-1.5 text-white">{item.cantidad}</span>
                       <button
                         onClick={() => updateQuantity(item.repuesto.id, 1)}
-                        className="p-1 bg-[#141A29] hover:bg-[#26314D] text-slate-300 rounded cursor-pointer"
+                        className="w-5 h-5 bg-[#111726] hover:bg-slate-700 text-slate-300 rounded flex items-center justify-center cursor-pointer"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => removeFromCart(item.repuesto.id)}
-                        className="p-1 text-red-400 hover:text-red-300 ml-1 cursor-pointer"
+                        className="p-1 text-slate-500 hover:text-rose-400 ml-1 cursor-pointer transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -384,50 +384,51 @@ export const NuevaVenta: React.FC = () => {
                 ))
               ) : (
                 <div className="text-center py-12 text-slate-500 text-xs">
-                  <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30 text-slate-400" />
-                  No ha agregado ningún repuesto a la orden.
+                  <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-400" />
+                  Seleccione artículos del catálogo para agregarlos a la orden.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Pricing Math & Submit */}
-          <div className="border-t border-[#222D46] pt-4 space-y-3">
-            <div className="flex justify-between text-xs text-slate-300">
+          <div className="border-t border-slate-800 pt-3 space-y-2.5">
+            <div className="flex justify-between text-xs text-slate-400 font-mono">
               <span>Subtotal:</span>
-              <span className="font-semibold text-white">${subtotalTotal.toFixed(2)}</span>
+              <span className="text-slate-200 font-semibold">${subtotalTotal.toFixed(2)}</span>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-300">
-              <span>Descuento ($):</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={descuento}
-                onChange={(e) => setDescuento(parseFloat(e.target.value) || 0)}
-                className="w-24 bg-[#1B2237] border border-[#26314D] rounded px-2 py-1 text-right text-amber-400 font-bold text-xs focus:outline-none"
-              />
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>Descuento aplicado:</span>
+              <div className="flex items-center space-x-1">
+                <span className="text-slate-500">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={descuento}
+                  onChange={(e) => setDescuento(parseFloat(e.target.value) || 0)}
+                  className="w-20 bg-[#182032] border border-slate-700 rounded px-2 py-1 text-right text-amber-400 font-mono font-semibold text-xs focus:outline-none"
+                />
+              </div>
             </div>
 
-            <div className="flex justify-between text-base font-extrabold text-[#FFB800] border-t border-[#222D46] pt-3">
-              <span>TOTAL ORDEN:</span>
-              <span>${totalFinal.toFixed(2)}</span>
+            <div className="flex justify-between text-sm font-bold text-white border-t border-slate-800 pt-2 font-mono">
+              <span>Total a cobrar:</span>
+              <span className="text-base text-amber-400">${totalFinal.toFixed(2)}</span>
             </div>
 
             <button
               onClick={handleSubmitOrder}
               disabled={createOrderMutation.isPending || cart.length === 0}
-              className="w-full bg-[#00C897] hover:bg-[#00B084] disabled:bg-slate-700 text-slate-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center space-x-2 transition-all shadow-lg cursor-pointer"
+              className="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all cursor-pointer text-xs"
             >
-              <CheckCircle className="w-5 h-5" />
-              <span>{createOrderMutation.isPending ? 'EMITIENDO...' : 'EMITIR ORDEN Y FACTURAR'}</span>
+              <CheckCircle className="w-4 h-4" />
+              <span>{createOrderMutation.isPending ? 'Procesando orden...' : 'Registrar Orden y Facturar'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Printable Receipt Modal */}
       <ReceiptModal orden={createdOrden} onClose={() => setCreatedOrden(null)} />
     </div>
   );

@@ -16,107 +16,105 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ orden, onClose }) =>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-[#141A29] border border-[#222D46] rounded-xl max-w-lg w-full p-6 text-slate-100 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+      <div className="bg-[#111726] border border-slate-800 rounded-xl max-w-lg w-full p-6 text-slate-100 shadow-xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg bg-[#1B2237]"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-md bg-[#182032] border border-slate-700/80 transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        <div className="text-center mb-6 border-b border-[#222D46] pb-4">
-          <div className="flex justify-center items-center space-x-2 text-[#FFB800] mb-1">
-            <Wrench className="w-6 h-6" />
-            <h2 className="text-2xl font-extrabold tracking-wider">LUBRIPOINT</h2>
+        <div className="text-center mb-5 border-b border-slate-800 pb-4">
+          <div className="flex justify-center items-center space-x-2 text-amber-400 mb-1">
+            <Wrench className="w-5 h-5" />
+            <h2 className="text-xl font-bold tracking-tight text-white">LUBRIPOINT</h2>
           </div>
-          <p className="text-xs text-slate-400">Taller Mecánico & Centro de Lubricación</p>
-          <p className="text-xs text-slate-400">NIT: 0614-280926-101-5 | Tel: (503) 2223-2443</p>
-          <div className="mt-3 bg-[#1B2237] py-1 px-3 rounded inline-block">
-            <span className="text-sm font-bold text-[#FFB800]">COMPROBANTE DE VENTA {orden.codigoOrden}</span>
+          <p className="text-xs text-slate-400">Centro de Mantenimiento Automotriz y Lubricación</p>
+          <p className="text-[11px] text-slate-500 font-mono">NIT: 0614-280926-101-5 | San Salvador, El Salvador</p>
+          <div className="mt-2.5 bg-[#182032] py-1 px-3 rounded-md inline-block border border-slate-800">
+            <span className="text-xs font-mono font-bold text-amber-400">COMPROBANTE {orden.codigoOrden}</span>
           </div>
         </div>
 
-        <div className="space-y-2 text-xs mb-4 text-slate-300">
+        <div className="space-y-1.5 text-xs mb-4 text-slate-300">
           <div className="flex justify-between">
-            <span className="font-semibold text-slate-400">Fecha y Hora:</span>
-            <span>{dayjs(orden.fechaEmision).format('DD/MM/YYYY hh:mm A')}</span>
+            <span className="text-slate-400">Fecha y Hora:</span>
+            <span className="font-mono text-slate-200">{dayjs(orden.fechaEmision).format('DD/MM/YYYY hh:mm A')}</span>
           </div>
           <div className="flex justify-between">
-            <span className="font-semibold text-slate-400">Cliente:</span>
-            <span className="font-bold text-white">{orden.clienteNombre}</span>
+            <span className="text-slate-400">Cliente:</span>
+            <span className="font-semibold text-slate-100">{orden.clienteNombre}</span>
           </div>
           <div className="flex justify-between">
-            <span className="font-semibold text-slate-400">Teléfono:</span>
-            <span>{orden.clienteTelefono || '---'}</span>
+            <span className="text-slate-400">Teléfono:</span>
+            <span className="font-mono">{orden.clienteTelefono || '---'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="font-semibold text-slate-400">Vehículo:</span>
-            <span>{orden.marca} {orden.modelo} ({orden.placa})</span>
+            <span className="text-slate-400">Vehículo:</span>
+            <span className="font-mono">{orden.marca} {orden.modelo} ({orden.placa})</span>
           </div>
           {orden.descripcionFalla && (
             <div className="flex justify-between">
-              <span className="font-semibold text-slate-400">Detalle / Falla:</span>
-              <span className="italic text-slate-300 truncate max-w-[200px]">{orden.descripcionFalla}</span>
+              <span className="text-slate-400">Detalle:</span>
+              <span className="text-slate-300 truncate max-w-[200px]">{orden.descripcionFalla}</span>
             </div>
           )}
         </div>
 
-        {/* Tabla de Detalle */}
-        <div className="border border-[#222D46] rounded-lg overflow-hidden mb-4">
+        <div className="border border-slate-800 rounded-lg overflow-hidden mb-4">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#1B2237] text-slate-400 border-b border-[#222D46]">
+            <thead className="bg-[#182032] text-slate-400 border-b border-slate-800 uppercase text-[10px] tracking-wider">
               <tr>
-                <th className="py-2 px-3">Item</th>
+                <th className="py-2 px-3">Artículo</th>
                 <th className="py-2 px-3 text-center">Cant.</th>
                 <th className="py-2 px-3 text-right">P. Unit</th>
                 <th className="py-2 px-3 text-right">Subtotal</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#222D46]">
+            <tbody className="divide-y divide-slate-800">
               {orden.detalles?.map((det, idx) => (
-                <tr key={idx} className="hover:bg-[#1B2237]/40">
+                <tr key={idx} className="hover:bg-slate-800/40">
                   <td className="py-2 px-3 font-medium text-slate-200">
                     {det.repuesto?.nombre || `Repuesto #${det.repuestoId}`}
                   </td>
-                  <td className="py-2 px-3 text-center text-slate-300">{det.cantidad}</td>
-                  <td className="py-2 px-3 text-right text-slate-300">${Number(det.precioUnitario).toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right font-bold text-emerald-400">${Number(det.subtotal).toFixed(2)}</td>
+                  <td className="py-2 px-3 text-center font-mono text-slate-300">{det.cantidad}</td>
+                  <td className="py-2 px-3 text-right font-mono text-slate-300">${Number(det.precioUnitario).toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right font-mono font-semibold text-slate-100">${Number(det.subtotal).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Totales */}
-        <div className="space-y-1.5 text-xs text-slate-300 mb-6 border-t border-[#222D46] pt-3">
+        <div className="space-y-1.5 text-xs text-slate-300 mb-5 border-t border-slate-800 pt-3 font-mono">
           <div className="flex justify-between">
-            <span>Subtotal:</span>
+            <span className="text-slate-400">Subtotal:</span>
             <span>${Number(orden.subtotal).toFixed(2)}</span>
           </div>
           {Number(orden.descuento) > 0 && (
-            <div className="flex justify-between text-red-400">
+            <div className="flex justify-between text-rose-400">
               <span>Descuento:</span>
               <span>-${Number(orden.descuento).toFixed(2)}</span>
             </div>
           )}
-          <div className="flex justify-between text-base font-extrabold text-[#FFB800] pt-1 border-t border-[#222D46]">
-            <span>TOTAL A PAGAR:</span>
-            <span>${Number(orden.total).toFixed(2)}</span>
+          <div className="flex justify-between text-sm font-bold text-white pt-1.5 border-t border-slate-800">
+            <span>TOTAL FACTURA:</span>
+            <span className="text-base text-amber-400">${Number(orden.total).toFixed(2)}</span>
           </div>
         </div>
 
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <button
             onClick={handlePrint}
-            className="flex-1 bg-[#FFB800] hover:bg-[#E0A200] text-slate-950 font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+            className="flex-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-1.5 transition-colors cursor-pointer text-xs"
           >
             <Printer className="w-4 h-4" />
             <span>Imprimir Comprobante</span>
           </button>
           <button
             onClick={onClose}
-            className="bg-[#1B2237] hover:bg-[#26314D] text-slate-300 font-medium py-2 px-4 rounded-lg transition-colors cursor-pointer"
+            className="bg-[#182032] hover:bg-[#202b42] text-slate-300 font-medium py-2 px-4 rounded-lg border border-slate-700/80 transition-colors cursor-pointer text-xs"
           >
             Cerrar
           </button>

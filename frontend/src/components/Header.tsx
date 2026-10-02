@@ -10,8 +10,7 @@ import {
   UserCheck,
   LogOut,
   Wrench,
-  Home,
-  BookOpen
+  User
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -25,50 +24,60 @@ export const Header: React.FC = () => {
   };
 
   const navItems = [
-    { label: 'Resumen', path: '/', icon: LayoutDashboard },
-    { label: 'NUEVA VENTA', path: '/nueva-venta', icon: ShoppingCart, highlight: true },
-    { label: 'Historial Ventas', path: '/historial', icon: History },
+    { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { label: 'Punto de Venta', path: '/nueva-venta', icon: ShoppingCart, highlight: true },
+    { label: 'Historial', path: '/historial', icon: History },
     { label: 'Inventario', path: '/inventario', icon: Boxes },
     { label: 'Categorías', path: '/categorias', icon: Tag },
-    { label: 'Mi Perfil & Admins', path: '/perfil', icon: UserCheck },
+    { label: 'Equipo y Perfil', path: '/perfil', icon: UserCheck },
   ];
 
   return (
-    <header className="w-full bg-[#0D111D] border-b border-[#222D46] shadow-xl">
-      {/* Top Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Wrench className="w-7 h-7 text-[#FFB800]" />
-          <span className="text-2xl font-extrabold tracking-wider text-[#FFB800] uppercase font-['Plus_Jakarta_Sans']">
-            LUBRIPOINT
-          </span>
-        </div>
+    <header className="w-full bg-[#0f1422] border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <Wrench className="w-5 h-5" />
+            </div>
+            <div>
+              <Link to="/" className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                <span>LUBRIPOINT</span>
+                <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                  Taller
+                </span>
+              </Link>
+              <p className="text-[11px] text-slate-400 hidden sm:block">Control de Inventario y Operaciones</p>
+            </div>
+          </div>
 
-        <div className="flex items-center space-x-6 text-sm font-medium text-slate-300">
-          <Link to="/" className="flex items-center space-x-1 hover:text-[#FFB800] transition-colors">
-            <Home className="w-4 h-4 text-purple-400" />
-            <span>Inicio</span>
-          </Link>
-          <Link to="/inventario" className="flex items-center space-x-1 hover:text-[#FFB800] transition-colors">
-            <BookOpen className="w-4 h-4 text-purple-400" />
-            <span>Catálogo</span>
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4 text-purple-400" />
-            <span>Salir</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            {user && (
+              <div className="hidden md:flex items-center space-x-2.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+                <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[11px]">
+                  {user.nombre?.charAt(0) || <User className="w-3.5 h-3.5" />}
+                </div>
+                <div className="text-left">
+                  <span className="text-slate-200 font-semibold block leading-tight">{user.nombre}</span>
+                  <span className="text-[10px] text-amber-400 font-medium capitalize">{user.rol?.toLowerCase()}</span>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg border border-slate-800 hover:border-rose-500/30 transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Salir</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Navigation Tabs */}
-      <div className="bg-[#141A29] border-t border-[#222D46]/80 px-4 py-2">
-        <div className="max-w-7xl mx-auto flex items-center justify-center sm:justify-start space-x-2 sm:space-x-4 overflow-x-auto text-xs sm:text-sm font-medium">
-          <span className="text-slate-400 font-bold uppercase tracking-wider px-2 border-r border-[#222D46] hidden md:inline">
-            | PANEL:
-          </span>
+      <div className="bg-[#0b0f17] border-t border-slate-800/60 px-4">
+        <div className="max-w-7xl mx-auto flex items-center space-x-1 overflow-x-auto py-1.5 text-xs font-medium scrollbar-none">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -78,13 +87,13 @@ export const Header: React.FC = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-semibold text-emerald-400 border border-emerald-500/30 transition-all ${
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md font-semibold transition-all shrink-0 ${
                     isActive
-                      ? 'bg-emerald-500/20 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                      : 'hover:bg-emerald-500/10 hover:text-emerald-300'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -94,13 +103,13 @@ export const Header: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'text-[#FFB800] bg-[#1B2237] font-bold border-b-2 border-[#FFB800]'
-                    : 'text-slate-300 hover:text-white hover:bg-[#1B2237]/60'
+                    ? 'bg-slate-800 text-amber-400 font-semibold border border-slate-700'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                 }`}
               >
-                <Icon className="w-4 h-4 text-purple-400" />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
               </Link>
             );

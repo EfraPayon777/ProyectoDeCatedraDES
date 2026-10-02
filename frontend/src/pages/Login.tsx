@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, ArrowRight, Wrench } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Wrench, ShieldCheck, KeyRound } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../services/api';
 
@@ -20,87 +20,122 @@ export const Login: React.FC = () => {
       login(res.data.access_token, res.data.user);
       Swal.fire({
         icon: 'success',
-        title: '¡Bienvenido a Lubripoint!',
-        text: `Sesión iniciada como ${res.data.user.nombre}`,
-        timer: 1500,
+        title: 'Acceso autorizado',
+        text: `Bienvenido al sistema, ${res.data.user.nombre}`,
+        timer: 1400,
         showConfirmButton: false,
       });
       navigate('/');
     } catch (err: any) {
       Swal.fire({
         icon: 'error',
-        title: 'Error de Autenticación',
-        text: err.response?.data?.message || 'Credenciales incorrectas. Verifique correo y contraseña.',
+        title: 'Error de acceso',
+        text: err.response?.data?.message || 'Credenciales no válidas. Verifique correo y contraseña.',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0A0E1A] flex flex-col justify-center items-center p-4 relative overflow-hidden">
-      {/* Background Subtle Ambient Glow */}
-      <div className="absolute w-[500px] h-[500px] bg-[#FFB800]/5 rounded-full blur-3xl pointer-events-none -top-20 -left-20"></div>
-      <div className="absolute w-[500px] h-[500px] bg-[#00C897]/5 rounded-full blur-3xl pointer-events-none -bottom-20 -right-20"></div>
+  const handleFillDemo = () => {
+    setEmail('lubripointsv@gmail.com');
+    setPassword('admin123');
+  };
 
-      {/* Main Login Card matching screenshot */}
-      <div className="bg-[#141A29] border border-[#222D46] rounded-2xl p-8 max-w-md w-full shadow-2xl relative z-10 backdrop-blur-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-[#FFB800]/10 border border-[#FFB800]/20 rounded-full mb-3 text-[#FFB800]">
-            <Wrench className="w-8 h-8" />
+  return (
+    <div className="min-h-screen bg-[#090d16] flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-[#111726] border border-slate-800 rounded-xl p-8 shadow-xl">
+          <div className="flex items-center space-x-3 mb-6 pb-6 border-b border-slate-800">
+            <div className="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shrink-0">
+              <Wrench className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span>LUBRIPOINT</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                  v1.0
+                </span>
+              </h1>
+              <p className="text-xs text-slate-400">Sistema de Gestión de Taller e Inventario</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-extrabold text-[#FFB800] tracking-wider uppercase">LUBRIPOINT</h1>
-          <p className="text-xs text-slate-400 mt-1">Bienvenido de nuevo</p>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Correo institucional o usuario
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="usuario@taller.com"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg pl-9 pr-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-slate-300">
+                  Contraseña de acceso
+                </label>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg pl-9 pr-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center space-x-2 transition-all cursor-pointer text-sm disabled:opacity-50 mt-2"
+            >
+              <span>{loading ? 'Validando credenciales...' : 'Ingresar al sistema'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+
+          <div className="mt-6 pt-5 border-t border-slate-800/80">
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+              <span className="flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                Acceso de evaluación:
+              </span>
+              <button
+                type="button"
+                onClick={handleFillDemo}
+                className="text-amber-400 hover:underline cursor-pointer font-medium"
+              >
+                Autocompletar
+              </button>
+            </div>
+            <div className="bg-[#182032] border border-slate-800 rounded-md p-2.5 text-[11px] font-mono text-slate-300 space-y-0.5">
+              <div><span className="text-slate-500">Email:</span> lubripointsv@gmail.com</div>
+              <div><span className="text-slate-500">Clave:</span> admin123</div>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Correo Electrónico</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#FFB800]">
-                <Mail className="w-4 h-4" />
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ejemplo@gmail.com"
-                className="w-full bg-[#1B2237] border border-[#26314D] rounded-xl pl-10 pr-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#FFB800] transition-colors"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Contraseña</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#FFB800]">
-                <Lock className="w-4 h-4" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-[#1B2237] border border-[#26314D] rounded-xl pl-10 pr-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#FFB800] transition-colors"
-                required
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#FFB800] hover:bg-[#E0A200] text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-lg flex items-center justify-center space-x-2 transition-all cursor-pointer font-['Plus_Jakarta_Sans']"
-          >
-            <span>{loading ? 'INGRESANDO...' : 'INGRESAR'}</span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </form>
-
-        <div className="text-center mt-6 text-xs text-slate-400">
-          <span>¿No tienes cuenta? </span>
-          <span className="text-[#FFB800] font-semibold cursor-pointer hover:underline">Regístrate aquí</span>
+        <div className="text-center mt-4 text-xs text-slate-500 flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span>Acceso restringido para personal autorizado</span>
         </div>
       </div>
     </div>

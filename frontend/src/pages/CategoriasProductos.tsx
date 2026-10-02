@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Tag, Plus, Edit2, Trash2, Boxes, ArrowRight, Layers, Sparkles } from 'lucide-react';
+import { Tag, Plus, Edit2, Trash2, Boxes, ArrowRight, FolderPlus } from 'lucide-react';
 import api from '../services/api';
 import { Categoria } from '../types';
 import Swal from 'sweetalert2';
@@ -9,11 +9,9 @@ import Swal from 'sweetalert2';
 export const CategoriasProductos: React.FC = () => {
   const queryClient = useQueryClient();
 
-  // Estado para Categoría
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [filtro, setFiltro] = useState('');
 
-  // Consultas
   const { data: categorias, isLoading } = useQuery<Categoria[]>({
     queryKey: ['categorias'],
     queryFn: async () => {
@@ -22,7 +20,6 @@ export const CategoriasProductos: React.FC = () => {
     },
   });
 
-  // Mutación crear categoría
   const createCatMutation = useMutation({
     mutationFn: async (nombre: string) => {
       const res = await api.post('/categorias', { nombre: nombre.trim() });
@@ -33,22 +30,21 @@ export const CategoriasProductos: React.FC = () => {
       setNuevaCategoria('');
       Swal.fire({
         icon: 'success',
-        title: 'Categoría Creada',
-        text: 'La categoría fue registrada exitosamente.',
-        timer: 1600,
+        title: 'Categoría creada',
+        text: 'La categoría fue registrada satisfactoriamente.',
+        timer: 1500,
         showConfirmButton: false,
       });
     },
     onError: (err: any) => {
       Swal.fire({
         icon: 'error',
-        title: 'Error al crear',
+        title: 'Error de registro',
         text: err.response?.data?.message || 'No se pudo crear la categoría.',
       });
     },
   });
 
-  // Mutación editar categoría
   const updateCatMutation = useMutation({
     mutationFn: async ({ id, nombre }: { id: number; nombre: string }) => {
       const res = await api.put(`/categorias/${id}`, { nombre: nombre.trim() });
@@ -60,22 +56,21 @@ export const CategoriasProductos: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
       Swal.fire({
         icon: 'success',
-        title: 'Categoría Actualizada',
-        text: 'El nombre de la categoría fue modificado con éxito.',
-        timer: 1600,
+        title: 'Categoría actualizada',
+        text: 'Los cambios fueron guardados.',
+        timer: 1500,
         showConfirmButton: false,
       });
     },
     onError: (err: any) => {
       Swal.fire({
         icon: 'error',
-        title: 'Error al actualizar',
-        text: err.response?.data?.message || 'No se pudo actualizar la categoría.',
+        title: 'Error de actualización',
+        text: err.response?.data?.message || 'No se pudo modificar la categoría.',
       });
     },
   });
 
-  // Mutación eliminar categoría
   const deleteCatMutation = useMutation({
     mutationFn: async (id: number) => {
       await api.delete(`/categorias/${id}`);
@@ -86,16 +81,16 @@ export const CategoriasProductos: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
       Swal.fire({
         icon: 'success',
-        title: 'Categoría Eliminada',
-        timer: 1500,
+        title: 'Categoría eliminada',
+        timer: 1400,
         showConfirmButton: false,
       });
     },
     onError: (err: any) => {
       Swal.fire({
         icon: 'error',
-        title: 'No se puede eliminar',
-        text: err.response?.data?.message || 'La categoría tiene repuestos asociados.',
+        title: 'Operación restringida',
+        text: err.response?.data?.message || 'La categoría contiene repuestos vinculados.',
       });
     },
   });
@@ -109,17 +104,17 @@ export const CategoriasProductos: React.FC = () => {
   const handleEditCategory = (cat: Categoria) => {
     Swal.fire({
       title: 'Editar Categoría',
-      text: 'Modifica el nombre de la categoría:',
+      text: 'Ingrese la nueva denominación:',
       input: 'text',
       inputValue: cat.nombre,
       showCancelButton: true,
-      confirmButtonText: 'Guardar Cambios',
+      confirmButtonText: 'Guardar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#00C897',
-      cancelButtonColor: '#1B2237',
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#334155',
       inputValidator: (value) => {
         if (!value || !value.trim()) {
-          return 'El nombre de la categoría no puede estar vacío.';
+          return 'El nombre de la categoría es obligatorio.';
         }
       },
     }).then((result) => {
@@ -131,12 +126,12 @@ export const CategoriasProductos: React.FC = () => {
 
   const handleDeleteCategory = (id: number, nombreCat: string) => {
     Swal.fire({
-      title: '¿Eliminar Categoría?',
-      text: `¿Seguro que deseas eliminar "${nombreCat}"?`,
+      title: '¿Confirmar eliminación?',
+      text: `Se eliminará la clasificación "${nombreCat}". Asegúrese de que no tenga repuestos activos.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#1B2237',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#334155',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar',
     }).then((result) => {
@@ -151,53 +146,48 @@ export const CategoriasProductos: React.FC = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-800/60">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#FFB800] flex items-center space-x-2">
-            <Tag className="w-7 h-7" />
-            <span>Gestión de Categorías</span>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <span>Clasificación de Repuestos y Categorías</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Administra, edita y organiza las clasificaciones del catálogo del taller
+          <p className="text-xs text-slate-400 mt-0.5">
+            Organización del catálogo para búsquedas rápidas en ventas e inventario
           </p>
         </div>
 
-        {/* Acceso directo a Inventario para registrar repuestos */}
         <Link
           to="/inventario"
-          className="bg-[#1B2237] hover:bg-[#26314D] border border-[#222D46] hover:border-[#FFB800] text-slate-200 font-bold px-4 py-2 rounded-lg flex items-center space-x-2 text-xs transition-colors shadow-lg"
+          className="bg-[#182032] hover:bg-[#202b42] text-slate-200 border border-slate-700/80 font-medium px-3.5 py-2 rounded-lg flex items-center space-x-2 text-xs shadow-sm transition-all"
         >
-          <Boxes className="w-4 h-4 text-[#FFB800]" />
-          <span>Gestionar Productos en Inventario</span>
-          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+          <Boxes className="w-4 h-4 text-amber-400" />
+          <span>Ir al Catálogo de Inventario</span>
+          <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
         </Link>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Formulario Agregar Categoría (Col 1) */}
-        <div className="bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl space-y-5 h-fit">
-          <div className="flex items-center space-x-2 text-[#00C897]">
-            <Layers className="w-5 h-5" />
-            <h2 className="text-lg font-bold text-white">Nueva Categoría</h2>
+        <div className="bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-4 h-fit">
+          <div className="flex items-center space-x-2 text-slate-200 pb-2 border-b border-slate-800">
+            <FolderPlus className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-semibold">Registrar Nueva Categoría</h2>
           </div>
           <p className="text-xs text-slate-400">
-            Crea una nueva clasificación para agrupar aceites, filtros, repuestos o herramientas.
+            Agrupe insumos por familia técnica (por ejemplo: Aceites de Motor, Filtros, Sistema de Frenos).
           </p>
 
-          <form onSubmit={handleCreateCategory} className="space-y-4">
+          <form onSubmit={handleCreateCategory} className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Nombre de la Categoría <span className="text-red-400">*</span>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Nombre de la categoría *
               </label>
               <input
                 type="text"
-                placeholder="Ej. Baterías, Amortiguadores..."
+                placeholder="Ej. Baterías y Encendido"
                 value={nuevaCategoria}
                 onChange={(e) => setNuevaCategoria(e.target.value)}
-                className="w-full bg-[#1B2237] border border-[#26314D] rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00C897] transition-colors"
+                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                 required
               />
             </div>
@@ -205,92 +195,74 @@ export const CategoriasProductos: React.FC = () => {
             <button
               type="submit"
               disabled={createCatMutation.isPending || !nuevaCategoria.trim()}
-              className="w-full bg-[#00C897] hover:bg-[#00B084] text-slate-950 font-bold px-5 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-colors cursor-pointer text-sm shadow-lg disabled:opacity-50"
+              className="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold px-4 py-2 rounded-lg flex items-center justify-center space-x-1.5 transition-colors cursor-pointer text-xs shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>{createCatMutation.isPending ? 'Creando...' : 'Crear Categoría'}</span>
+              <span>{createCatMutation.isPending ? 'Guardando...' : 'Agregar Categoría'}</span>
             </button>
           </form>
-
-          {/* Tips Card */}
-          <div className="p-4 bg-[#1B2237]/60 border border-[#222D46] rounded-xl space-y-2 text-xs text-slate-400">
-            <div className="flex items-center space-x-1.5 text-[#FFB800] font-semibold">
-              <Sparkles className="w-4 h-4" />
-              <span>Organización del Taller</span>
-            </div>
-            <p>
-              Las categorías permiten a los mecánicos y jefes de pista filtrar piezas rápidamente en el punto de venta y catálogo.
-            </p>
-          </div>
         </div>
 
-        {/* Tabla y Listado de Categorías (Col 2 & 3) */}
-        <div className="lg:col-span-2 bg-[#141A29] border border-[#222D46] rounded-xl p-6 shadow-xl space-y-5">
+        <div className="lg:col-span-2 bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                <span>Listado de Categorías</span>
-                <span className="text-xs bg-[#1B2237] text-[#FFB800] px-2 py-0.5 rounded-full border border-[#222D46]">
-                  {categorias?.length || 0} registradas
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <span>Categorías Registradas</span>
+                <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded border border-slate-700">
+                  {categorias?.length || 0}
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Edita o elimina las categorías existentes según la operativa
+                Gestione las clasificaciones activas del taller
               </p>
             </div>
 
-            {/* Buscador de Categorías */}
             <input
               type="text"
-              placeholder="Filtrar categorías..."
+              placeholder="Buscar categoría..."
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
-              className="w-full sm:w-56 bg-[#1B2237] border border-[#26314D] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#FFB800]"
+              className="w-full sm:w-52 bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
             />
           </div>
 
-          {/* Tabla de Categorías con Editar y Eliminar */}
-          <div className="overflow-x-auto border border-[#222D46] rounded-lg">
-            <table className="w-full text-left text-xs sm:text-sm text-slate-300">
-              <thead className="bg-[#1B2237] text-slate-400 uppercase tracking-wider border-b border-[#222D46]">
+          <div className="overflow-x-auto border border-slate-800 rounded-lg">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#182032] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
                 <tr>
-                  <th className="py-3 px-4 w-20">ID</th>
-                  <th className="py-3 px-4">NOMBRE DE LA CATEGORÍA</th>
-                  <th className="py-3 px-4 text-right w-44">ACCIONES</th>
+                  <th className="py-2.5 px-3.5 w-16">ID</th>
+                  <th className="py-2.5 px-3.5">Nombre</th>
+                  <th className="py-2.5 px-3.5 text-right w-36">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#222D46]">
+              <tbody className="divide-y divide-slate-800">
                 {isLoading ? (
                   <tr>
                     <td colSpan={3} className="py-8 text-center text-slate-500">
-                      Cargando categorías...
+                      Cargando clasificaciones...
                     </td>
                   </tr>
                 ) : categoriasFiltradas && categoriasFiltradas.length > 0 ? (
                   categoriasFiltradas.map((cat) => (
-                    <tr key={cat.id} className="hover:bg-[#1B2237]/40 transition-colors">
-                      <td className="py-3 px-4 font-bold text-[#FFB800]">#{cat.id}</td>
-                      <td className="py-3 px-4 font-semibold text-white">{cat.nombre}</td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          {/* Botón Editar Categoría */}
+                    <tr key={cat.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 px-3.5 font-mono text-slate-400">#{cat.id}</td>
+                      <td className="py-2.5 px-3.5 font-medium text-slate-100">{cat.nombre}</td>
+                      <td className="py-2.5 px-3.5 text-right">
+                        <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => handleEditCategory(cat)}
-                            title="Editar nombre de la categoría"
-                            className="bg-transparent hover:bg-blue-500/10 text-blue-400 border border-blue-500/40 hover:border-blue-400 font-semibold px-2.5 py-1 rounded-md flex items-center space-x-1 transition-colors cursor-pointer text-xs"
+                            title="Editar denominación"
+                            className="p-1.5 bg-[#182032] hover:bg-amber-500/20 text-slate-300 hover:text-amber-400 rounded border border-slate-700/80 transition-colors cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
-                            <span>Editar</span>
                           </button>
 
-                          {/* Botón Eliminar Categoría */}
                           <button
                             onClick={() => handleDeleteCategory(cat.id, cat.nombre)}
                             title="Eliminar categoría"
-                            className="bg-transparent hover:bg-red-500/10 text-red-400 border border-red-500/40 hover:border-red-400 font-semibold px-2.5 py-1 rounded-md flex items-center space-x-1 transition-colors cursor-pointer text-xs"
+                            className="p-1.5 bg-[#182032] hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 rounded border border-slate-700/80 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            <span>Eliminar</span>
                           </button>
                         </div>
                       </td>
