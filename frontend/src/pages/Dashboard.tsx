@@ -15,8 +15,10 @@ import api, { downloadExcelFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { DashboardSummary } from '../types';
 import Swal from 'sweetalert2';
+import { usePageTitle } from '../utils/usePageTitle';
 
 export const Dashboard: React.FC = () => {
+  usePageTitle('Dashboard');
   const { hasPermission } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
 

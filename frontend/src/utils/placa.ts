@@ -1,8 +1,5 @@
 /**
- * Regla de placas de El Salvador (copia exacta de backend/src/common/placa.ts — mantener sincronizadas).
- *
- * FORMATO → se valida.   DUPLICIDAD → se permite.
- * La placa NO es única: una misma placa puede aparecer en cualquier cantidad de órdenes/comprobantes.
+ * Regla de placas de El Salvador
  */
 export const PREFIJOS_PLACA: Record<string, string> = {
   P: 'Particular',
@@ -28,7 +25,6 @@ export const PREFIJOS_PLACA: Record<string, string> = {
 
 export const PLACA_MAX_LENGTH = 12;
 
-// Prefijos más largos primero para que la alternancia no corte "PNC" como "P".
 const PREFIJOS_REGEX = Object.keys(PREFIJOS_PLACA)
   .sort((a, b) => b.length - a.length)
   .join('|');

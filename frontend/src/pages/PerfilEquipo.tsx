@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { DESCRIPCION_ROL, ROLES_ASIGNABLES, esRolVigente } from '../context/permissions';
 import { showApiError } from '../services/apiErrors';
 import { EMAIL_REGEX, FieldErrors, hasErrors, validarTexto } from '../utils/validators';
+import { usePageTitle } from '../utils/usePageTitle';
 
 type CampoUsuario = 'nombre' | 'email' | 'password' | 'rol';
 
@@ -34,7 +35,6 @@ const validarUsuario = (
 const FieldError: React.FC<{ message?: string }> = ({ message }) =>
   message ? <p className="mt-1 text-[10px] text-rose-400">{message}</p> : null;
 
-// Solo presentación (colores del badge); los permisos NO se deciden por el nombre del rol.
 const rolBadgeClass = (rol: string) =>
   rol === 'Administrador'
     ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
@@ -47,6 +47,7 @@ const rolBadgeClass = (rol: string) =>
 export const PerfilEquipo: React.FC = () => {
   const { user, updateUser, hasPermission } = useAuth();
   const puedeVerEquipo = hasPermission('usuarios.view');
+  usePageTitle(puedeVerEquipo ? 'Equipo y Perfil' : 'Mi Perfil');
   const puedeCrearUsuarios = hasPermission('usuarios.create');
   const puedeAsignarRoles = hasPermission('usuarios.roles');
   const sinPermisos = !user?.permisos || user.permisos.length === 0;
@@ -59,7 +60,6 @@ export const PerfilEquipo: React.FC = () => {
   const [newAdminNombre, setNewAdminNombre] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
-  // Por defecto el rol de menor privilegio; el administrador elige explícitamente.
   const [newUserRol, setNewUserRol] = useState<UserRole>('Mecánico');
   const [profileErrors, setProfileErrors] = useState<FieldErrors<CampoUsuario>>({});
   const [newUserErrors, setNewUserErrors] = useState<FieldErrors<CampoUsuario>>({});
@@ -70,7 +70,6 @@ export const PerfilEquipo: React.FC = () => {
       const res = await api.get('/auth/admins');
       return res.data;
     },
-    // GET /auth/admins exige usuarios.view (solo Administrador): sin el permiso no se consulta.
     enabled: puedeVerEquipo,
   });
 
@@ -99,7 +98,6 @@ export const PerfilEquipo: React.FC = () => {
         nombre: newAdminNombre.trim(),
         email: newAdminEmail.trim(),
         password: newAdminPassword,
-        // Valor exacto del enum UserRole del backend: 'Administrador' | 'Jefe de Pista' | 'Mecánico'
         rol: newUserRol,
       });
       return res.data;

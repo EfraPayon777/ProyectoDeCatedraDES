@@ -5,8 +5,10 @@ import { Mail, Lock, ArrowRight, Wrench, ShieldCheck, KeyRound } from 'lucide-re
 import Swal from 'sweetalert2';
 import api from '../services/api';
 import { showApiError } from '../services/apiErrors';
+import { usePageTitle } from '../utils/usePageTitle';
 
 export const Login: React.FC = () => {
+  usePageTitle('Iniciar sesión');
   const [email, setEmail] = useState('lubripointsv@gmail.com');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);

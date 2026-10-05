@@ -27,8 +27,6 @@ export const ProductoPreviewModal: React.FC<ProductoPreviewModalProps> = ({
   onEdit,
   onAddStock,
 }) => {
-  // Se consulta el detalle al backend (GET /repuestos/:id) para mostrar siempre los valores vigentes,
-  // incluidos los costos con IVA calculados por el servidor. Mientras carga se usa el registro de la lista.
   const { data: detalle } = useQuery<Repuesto>({
     queryKey: ['repuesto', repuestoInicial?.id],
     queryFn: async () => {
@@ -46,7 +44,6 @@ export const ProductoPreviewModal: React.FC<ProductoPreviewModalProps> = ({
   const isOut = repuesto.stockActual <= 0;
   const isLow = repuesto.stockActual > 0 && repuesto.stockActual <= repuesto.stockMinimo;
 
-  // Sin "valor || 0": null/undefined se muestran como "—", no como $0.00.
   const precio = toNumberOrNull(repuesto.precioFinal);
   const costoConIva = toNumberOrNull(repuesto.costoConIva);
   const costoSinIva = toNumberOrNull(repuesto.costoSinIva);

@@ -69,8 +69,6 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors<CampoProducto>>({});
-  // Qué costo modificó el usuario en esta edición: si solo cambia uno, el otro se envía vacío
-  // para que el backend lo recalcule (evita enviar un par incoherente).
   const [sinIvaTouched, setSinIvaTouched] = useState(false);
   const [conIvaTouched, setConIvaTouched] = useState(false);
 
@@ -116,8 +114,6 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Sin permiso catalogo.create / catalogo.edit (p. ej. Mecánico) el formulario no se muestra.
-  // El backend igualmente responde 403 a POST/PUT /repuestos.
   if (!hasPermission(isEditing ? 'catalogo.edit' : 'catalogo.create')) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
@@ -133,7 +129,6 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
 
   const clearError = (campo: CampoProducto) => setErrors((prev) => ({ ...prev, [campo]: undefined }));
 
-  // El IVA NO se calcula aquí: lo calcula el backend al guardar (fuente única de la fórmula).
   const handleCostoSinIvaChange = (val: string) => {
     setCostoSinIva(val === '' ? '' : parseFloat(val));
     setSinIvaTouched(true);
@@ -256,7 +251,6 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || undefined,
         precioFinal: Number(precio),
-        // Vacío → 0: el backend interpreta 0 como "no ingresado" y lo calcula con IVA 13%
         costoSinIva: costoSinIva !== '' ? Number(costoSinIva) : 0,
         costoConIva: costoConIva !== '' ? Number(costoConIva) : 0,
         stockActual: stockActual !== '' ? Number(stockActual) : 0,
@@ -271,7 +265,6 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
           : await api.post<Repuesto>('/repuestos', payload);
       const saved = res.data;
 
-      // Se muestran los costos tal como los devolvió el backend (ya calculados).
       if (saved?.id) {
         queryClient.setQueryData(['repuesto', saved.id], saved);
       }

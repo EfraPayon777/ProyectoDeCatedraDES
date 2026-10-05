@@ -21,6 +21,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../context/AuthContext';
 import { showApiError } from '../services/apiErrors';
 import { formatMoney } from '../utils/format';
+import { usePageTitle } from '../utils/usePageTitle';
 
 export const Inventario: React.FC = () => {
   const queryClient = useQueryClient();
@@ -30,6 +31,7 @@ export const Inventario: React.FC = () => {
   const puedeEliminar = hasPermission('catalogo.delete');
   const puedeRegistrarEntradas = hasPermission('inventario.create');
   const puedeVerInventario = hasPermission('inventario.view');
+  usePageTitle(puedeVerInventario ? 'Inventario' : 'Catálogo');
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState('');

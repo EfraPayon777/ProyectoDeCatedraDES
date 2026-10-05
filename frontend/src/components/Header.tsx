@@ -23,7 +23,6 @@ export const Header: React.FC = () => {
     navigate('/login');
   };
 
-  // Cada módulo se muestra según los permisos que devuelve el backend (no por nombre de rol).
   const navItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard, visible: hasPermission('finanzas.view') },
     { label: 'Punto de Venta', path: '/nueva-venta', icon: ShoppingCart, highlight: true, visible: hasPermission('ordenes.create') },
@@ -35,7 +34,6 @@ export const Header: React.FC = () => {
       visible: hasPermission('catalogo.view'),
     },
     { label: 'Categorías', path: '/categorias', icon: Tag, visible: hasPermission('catalogo.view') },
-    // Sin gestión de usuarios, la misma ruta solo muestra el perfil propio
     { label: hasPermission('usuarios.view') ? 'Equipo y Perfil' : 'Mi Perfil', path: '/perfil', icon: UserCheck },
   ].filter((item) => item.visible !== false);
 

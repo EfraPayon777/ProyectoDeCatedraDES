@@ -8,7 +8,6 @@ import { showApiError } from '../services/apiErrors';
 import { useAuth } from '../context/AuthContext';
 import { AccessDenied } from './RequirePermission';
 
-/** Estados que el backend permite actualizar (PATCH /ordenes/:id). CANCELADA no aplica: implicaría devolver stock. */
 const ESTADOS: { value: string; label: string }[] = [
   { value: 'PENDIENTE', label: 'Pendiente / En proceso' },
   { value: 'COMPLETADA', label: 'Completada' },
@@ -19,7 +18,6 @@ interface Props {
   onClose: () => void;
 }
 
-/** Actualización operativa de una orden (permiso ordenes.update): estado y detalle del trabajo realizado. */
 export const ActualizarOrdenModal: React.FC<Props> = ({ orden, onClose }) => {
   const { hasPermission } = useAuth();
   const queryClient = useQueryClient();

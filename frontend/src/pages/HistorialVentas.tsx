@@ -8,13 +8,15 @@ import { ActualizarOrdenModal } from '../components/ActualizarOrdenModal';
 import { useAuth } from '../context/AuthContext';
 import dayjs from 'dayjs';
 import Swal from 'sweetalert2';
+import { usePageTitle } from '../utils/usePageTitle';
 
 export const HistorialVentas: React.FC = () => {
+  usePageTitle('Órdenes');
   const [selectedOrden, setSelectedOrden] = useState<Orden | null>(null);
   const [ordenActualizar, setOrdenActualizar] = useState<Orden | null>(null);
   const { hasPermission } = useAuth();
   const puedeActualizar = hasPermission('ordenes.update');
-  const puedeVerFinanzas = hasPermission('finanzas.view'); // exportación de ventas = información financiera
+  const puedeVerFinanzas = hasPermission('finanzas.view'); 
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: ordenes, isLoading } = useQuery<Orden[]>({

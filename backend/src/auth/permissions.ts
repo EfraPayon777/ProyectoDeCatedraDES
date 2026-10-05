@@ -31,16 +31,6 @@ export enum Permiso {
   FINANZAS_VIEW = 'finanzas.view',
 }
 
-/**
- * Matriz de roles y permisos (referencia: matriz del proyecto).
- *
- * | Capacidad              | Administrador | Jefe de Pista | Mecánico  |
- * | Catálogo               | ✓             | ✓             | Consulta  |
- * | Entradas de inventario | ✓             | ✓             | —         |
- * | Órdenes de trabajo     | ✓             | ✓             | Actualiza |
- * | Gestión de usuarios    | ✓             | —             | —         |
- * | Métricas financieras   | ✓             | Consulta      | —         |
- */
 export const ROLE_PERMISOS: Record<UserRole, Permiso[]> = {
   [UserRole.ADMIN]: Object.values(Permiso),
   [UserRole.JEFE_PISTA]: [
@@ -58,11 +48,6 @@ export const ROLE_PERMISOS: Record<UserRole, Permiso[]> = {
   [UserRole.MECANICO]: [Permiso.CATALOGO_VIEW, Permiso.ORDENES_VIEW, Permiso.ORDENES_UPDATE],
 };
 
-/**
- * Permisos efectivos de un rol. Un rol desconocido o retirado (p. ej. el antiguo "Empleado")
- * no tiene permisos: el usuario puede iniciar sesión y ver su perfil, pero nada más,
- * hasta que un Administrador le asigne uno de los tres roles vigentes.
- */
 export const getPermisos = (rol: string | null | undefined): Permiso[] =>
   (rol && ROLE_PERMISOS[rol as UserRole]) || [];
 

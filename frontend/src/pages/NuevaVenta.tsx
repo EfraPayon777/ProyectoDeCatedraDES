@@ -26,6 +26,7 @@ import {
   validarPlaca,
   validarTexto,
 } from '../utils/validators';
+import { usePageTitle } from '../utils/usePageTitle';
 
 type CampoVenta = 'placa' | 'marca' | 'modelo' | 'clienteNombre' | 'clienteTelefono' | 'descripcionFalla' | 'descuento';
 
@@ -41,6 +42,7 @@ interface CartItem {
 }
 
 export const NuevaVenta: React.FC = () => {
+  usePageTitle('Punto de Venta');
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -228,8 +230,6 @@ export const NuevaVenta: React.FC = () => {
                   maxLength={20}
                   autoComplete="off"
                   onChange={(e) => {
-                    // Solo se normaliza a mayúsculas: los caracteres inválidos no se eliminan en silencio,
-                    // se muestran con un mensaje que explica el problema.
                     setPlaca(e.target.value.toUpperCase());
                     clearError('placa');
                   }}

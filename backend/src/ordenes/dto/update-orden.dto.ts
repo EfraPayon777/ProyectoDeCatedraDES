@@ -3,11 +3,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TrimToUndefined } from '../../common/transformers';
 import { EstadoOrden } from '../../entities/orden.entity';
 
-/**
- * Actualización operativa de una orden de trabajo (permiso ordenes.update: Administrador, Jefe de Pista, Mecánico).
- * Solo admite el estado de avance y el detalle del trabajo realizado: NO modifica montos, repuestos ni stock.
- * CANCELADA no se admite aquí porque implicaría devolver existencias al inventario (no implementado).
- */
 export const ESTADOS_ACTUALIZABLES = [EstadoOrden.PENDIENTE, EstadoOrden.COMPLETADA];
 
 export class UpdateOrdenDto {

@@ -22,7 +22,6 @@ export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, o
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<FieldErrors<CampoEntrada>>({});
 
-  // El modal permanece montado: al abrirlo para otro repuesto se precarga su costo sin IVA (calculado por el backend).
   useEffect(() => {
     if (repuesto) {
       setCantidad(1);

@@ -4,8 +4,11 @@ import { ShieldOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Permission } from '../context/permissions';
 import { MENSAJE_SIN_PERMISOS } from '../services/apiErrors';
+import { usePageTitle } from '../utils/usePageTitle';
 
-export const AccessDenied: React.FC<{ message?: string }> = ({ message }) => (
+export const AccessDenied: React.FC<{ message?: string }> = ({ message }) => {
+  usePageTitle('Acceso denegado');
+  return (
   <div className="max-w-xl mx-auto px-4 py-16 text-center">
     <div className="w-14 h-14 mx-auto rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-4">
       <ShieldOff className="w-7 h-7" />
@@ -20,9 +23,9 @@ export const AccessDenied: React.FC<{ message?: string }> = ({ message }) => (
       <span>Volver al Dashboard</span>
     </Link>
   </div>
-);
+  );
+};
 
-/** Guard de ruta: muestra "Acceso denegado" si el rol del usuario no tiene el permiso. */
 export const RequirePermission: React.FC<{ permission: Permission; children: React.ReactElement }> = ({
   permission,
   children,
@@ -31,10 +34,6 @@ export const RequirePermission: React.FC<{ permission: Permission; children: Rea
   return hasPermission(permission) ? children : <AccessDenied />;
 };
 
-/**
- * Página de inicio según permisos: el Dashboard (métricas financieras) solo para finanzas.view;
- * el resto va al primer módulo disponible (p. ej. Mecánico → Órdenes).
- */
 export const HomeRoute: React.FC<{ dashboard: React.ReactElement }> = ({ dashboard }) => {
   const { hasPermission } = useAuth();
   if (hasPermission('finanzas.view')) return dashboard;

@@ -30,7 +30,6 @@ export class RepuestosService {
 
     if (search && search.trim() !== '') {
       query.andWhere(
-        // LOWER(...) para que la búsqueda no distinga mayúsculas también en PostgreSQL (LIKE es sensible allí; en SQLite no).
         '(LOWER(repuesto.nombre) LIKE :search OR LOWER(repuesto.codigo) LIKE :search OR LOWER(repuesto.descripcion) LIKE :search)',
         { search: `%${search.trim().toLowerCase()}%` },
       );
@@ -117,8 +116,6 @@ export class RepuestosService {
     try {
       await this.repuestoRepository.remove(repuesto);
     } catch (err: any) {
-      // Respaldo por si otra referencia aparece entre la verificación y el borrado.
-      // PostgreSQL: 23503 foreign_key_violation · SQLite: SQLITE_CONSTRAINT (FOREIGN KEY)
       const esFk = err?.code === '23503' || /FOREIGN KEY/i.test(String(err?.message ?? ''));
       if (esFk) {
         throw new ConflictException(this.mensajeEnUso(repuesto));

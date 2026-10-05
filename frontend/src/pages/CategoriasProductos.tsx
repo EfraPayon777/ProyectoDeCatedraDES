@@ -8,18 +8,20 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../context/AuthContext';
 import { showApiError } from '../services/apiErrors';
 import { validarTexto } from '../utils/validators';
+import { usePageTitle } from '../utils/usePageTitle';
 
 const MAX_NOMBRE_CATEGORIA = 100;
 const validarNombreCategoria = (value: string) =>
   validarTexto(value, 'El nombre de la categoría', MAX_NOMBRE_CATEGORIA);
 
 export const CategoriasProductos: React.FC = () => {
+  usePageTitle('Categorías');
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const puedeCrear = hasPermission('catalogo.create');
   const puedeEditar = hasPermission('catalogo.edit');
   const puedeEliminar = hasPermission('catalogo.delete');
-  const puedeGestionar = puedeCrear; // formulario "Registrar Nueva Categoría"
+  const puedeGestionar = puedeCrear; 
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [errorNombre, setErrorNombre] = useState<string | undefined>();
