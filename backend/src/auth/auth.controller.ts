@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Request, Put } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request, Put, Patch, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -6,8 +6,9 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
-import { Roles } from './roles.decorator';
-import { UserRole } from '../entities/usuario.entity';
+import { RequierePermisos } from './roles.decorator';
+import { Permiso } from './permissions';
+import { UpdateRolDto } from './dto/update-rol.dto';
 
 @ApiTags('Autenticación y Usuarios')
 @Controller('auth')
@@ -20,9 +21,9 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  @ApiOperation({ summary: 'Registrar un nuevo administrador / usuario' })
+  @ApiOperation({ summary: 'Registrar un nuevo usuario (rol: Administrador, Empleado, Jefe de Pista o Mecánico). Solo Administrador.' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @RequierePermisos(Permiso.USUARIOS_CREATE)
   @ApiBearerAuth()
   @Post('register')
   async register(@Body() registerDto: RegisterUserDto) {
@@ -34,7 +35,7 @@ export class AuthController {
   @ApiBearerAuth()
   @Get('profile')
   getProfile(@Request() req) {
-    return req.user;
+    return this.authService.conPermisos(req.user);
   }
 
   @ApiOperation({ summary: 'Actualizar perfil del usuario autenticado' })
@@ -45,12 +46,21 @@ export class AuthController {
     return this.authService.updateProfile(req.user.id, updateDto);
   }
 
-  @ApiOperation({ summary: 'Listar todos los administradores registrados' })
+  @ApiOperation({ summary: 'Listar todos los usuarios registrados (solo Administrador)' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.JEFE_PISTA)
+  @RequierePermisos(Permiso.USUARIOS_VIEW)
   @ApiBearerAuth()
   @Get('admins')
   async getAllAdmins() {
     return this.authService.getAllAdmins();
+  }
+
+  @ApiOperation({ summary: 'Asignar rol a un usuario (Administrador, Jefe de Pista o Mecánico). Solo Administrador.' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequierePermisos(Permiso.USUARIOS_ROLES)
+  @ApiBearerAuth()
+  @Patch('usuarios/:id/rol')
+  async cambiarRol(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRolDto) {
+    return this.authService.cambiarRol(id, dto.rol, req.user.id);
   }
 }

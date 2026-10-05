@@ -3,6 +3,9 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReportesService } from './reportes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { RequierePermisos } from '../auth/roles.decorator';
+import { Permiso } from '../auth/permissions';
 
 @ApiTags('Reportes y Dashboard')
 @Controller('reportes')
@@ -10,7 +13,8 @@ export class ReportesController {
   constructor(private readonly reportesService: ReportesService) {}
 
   @ApiOperation({ summary: 'Resumen financiero y kpis del dashboard' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequierePermisos(Permiso.FINANZAS_VIEW)
   @ApiBearerAuth()
   @Get('dashboard')
   async getDashboardSummary() {
@@ -18,7 +22,8 @@ export class ReportesController {
   }
 
   @ApiOperation({ summary: 'Piezas y repuestos más utilizados en repuestos / reparaciones' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequierePermisos(Permiso.FINANZAS_VIEW)
   @ApiBearerAuth()
   @Get('piezas-mas-usadas')
   async getPiezasMasUtilizadas() {
@@ -26,7 +31,8 @@ export class ReportesController {
   }
 
   @ApiOperation({ summary: 'Exportar catálogo de inventario completo a archivo Excel (.xlsx)' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequierePermisos(Permiso.INVENTARIO_VIEW)
   @ApiBearerAuth()
   @Get('exportar-inventario')
   async exportarInventario(@Res() res: Response) {
@@ -37,7 +43,8 @@ export class ReportesController {
   }
 
   @ApiOperation({ summary: 'Exportar historial de ventas y órdenes a archivo Excel (.xlsx)' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequierePermisos(Permiso.FINANZAS_VIEW)
   @ApiBearerAuth()
   @Get('exportar-ventas')
   async exportarVentas(@Res() res: Response) {

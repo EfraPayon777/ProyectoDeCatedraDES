@@ -5,6 +5,7 @@ import { Orden, EstadoOrden } from '../entities/orden.entity';
 import { DetalleOrden } from '../entities/detalle-orden.entity';
 import { Repuesto } from '../entities/repuesto.entity';
 import { CreateOrdenDto } from './dto/create-orden.dto';
+import { UpdateOrdenDto } from './dto/update-orden.dto';
 
 @Injectable()
 export class OrdenesService {
@@ -30,6 +31,19 @@ export class OrdenesService {
       throw new NotFoundException(`Orden #${id} no encontrada`);
     }
     return orden;
+  }
+
+  async update(id: number, updateDto: UpdateOrdenDto): Promise<Orden> {
+    await this.findOne(id); // 404 si no existe
+    const cambios: Partial<Orden> = {};
+    if (updateDto.estado !== undefined) cambios.estado = updateDto.estado;
+    if (updateDto.descripcionFalla !== undefined) cambios.descripcionFalla = updateDto.descripcionFalla;
+    if (Object.keys(cambios).length === 0) {
+      throw new BadRequestException('Indique el estado o el detalle del trabajo a actualizar');
+    }
+    // update() directo: no toca detalles, montos ni stock (la relación detalles es cascade).
+    await this.ordenRepository.update(id, cambios);
+    return this.findOne(id);
   }
 
   async create(createDto: CreateOrdenDto, userId?: number): Promise<Orden> {
@@ -84,6 +98,11 @@ export class OrdenesService {
       }
 
       const descuento = Number(createDto.descuento || 0);
+      if (Math.round(descuento * 100) > Math.round(subtotalTotal * 100)) {
+        throw new BadRequestException(
+          `El descuento ($${descuento.toFixed(2)}) no puede ser mayor al subtotal de la orden ($${subtotalTotal.toFixed(2)})`,
+        );
+      }
       const totalFinal = Math.max(0, subtotalTotal - descuento);
 
       // 3. Crear y guardar Orden
