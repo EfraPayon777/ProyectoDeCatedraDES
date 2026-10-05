@@ -50,7 +50,7 @@ export class ReportesService {
       .groupBy('repuesto.id')
       .addGroupBy('repuesto.nombre')
       .addGroupBy('repuesto.codigo')
-      .orderBy('totalCantidad', 'DESC')
+      .orderBy('SUM(detalle.cantidad)', 'DESC') // PostgreSQL no resuelve el alias camelCase sin comillas
       .limit(10)
       .getRawMany();
   }

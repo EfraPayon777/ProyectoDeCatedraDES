@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, AfterLoad } from 'typeorm';
 import { Categoria } from './categoria.entity';
 import { DetalleOrden } from './detalle-orden.entity';
 import { EntradaInventario } from './entrada-inventario.entity';
+import { resolverCostosIva } from '../repuestos/iva.util';
 
 @Entity('repuestos')
 export class Repuesto {
@@ -47,4 +48,22 @@ export class Repuesto {
 
   @OneToMany(() => EntradaInventario, (entrada) => entrada.repuesto)
   entradas: EntradaInventario[];
+
+  /**
+   * Registros antiguos guardados con costos en 0 (antes del cálculo automático):
+   * al consultarlos se devuelven los costos calculados con IVA 13% sin modificar la BD.
+   * Se persisten la próxima vez que el repuesto se guarde.
+   */
+  @AfterLoad()
+  completarCostosIva() {
+    if (this.costoSinIva === undefined || this.costoConIva === undefined || this.precioFinal === undefined) {
+      return; // carga parcial (select de columnas específicas)
+    }
+    if (Number(this.costoSinIva) > 0 && Number(this.costoConIva) > 0) {
+      return;
+    }
+    const costos = resolverCostosIva(this.costoSinIva, this.costoConIva, this.precioFinal);
+    this.costoSinIva = costos.costoSinIva;
+    this.costoConIva = costos.costoConIva;
+  }
 }
