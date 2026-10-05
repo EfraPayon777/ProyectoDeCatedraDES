@@ -9,7 +9,10 @@ import {
   Edit2,
   Image as ImageIcon
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Repuesto } from '../types';
+import api from '../services/api';
+import { formatMoney, toNumberOrNull } from '../utils/format';
 
 interface ProductoPreviewModalProps {
   repuesto: Repuesto | null;
@@ -19,21 +22,37 @@ interface ProductoPreviewModalProps {
 }
 
 export const ProductoPreviewModal: React.FC<ProductoPreviewModalProps> = ({
-  repuesto,
+  repuesto: repuestoInicial,
   onClose,
   onEdit,
   onAddStock,
 }) => {
+  // Se consulta el detalle al backend (GET /repuestos/:id) para mostrar siempre los valores vigentes,
+  // incluidos los costos con IVA calculados por el servidor. Mientras carga se usa el registro de la lista.
+  const { data: detalle } = useQuery<Repuesto>({
+    queryKey: ['repuesto', repuestoInicial?.id],
+    queryFn: async () => {
+      const res = await api.get(`/repuestos/${repuestoInicial!.id}`);
+      return res.data;
+    },
+    enabled: !!repuestoInicial?.id,
+    placeholderData: repuestoInicial ?? undefined,
+    staleTime: 0,
+  });
+
+  const repuesto = detalle ?? repuestoInicial;
   if (!repuesto) return null;
 
   const isOut = repuesto.stockActual <= 0;
   const isLow = repuesto.stockActual > 0 && repuesto.stockActual <= repuesto.stockMinimo;
 
-  const precio = Number(repuesto.precioFinal || 0);
-  const costoConIva = Number(repuesto.costoConIva || 0);
-  const costoSinIva = Number(repuesto.costoSinIva || 0);
-  const ganancia = precio - costoConIva;
-  const margenPorcentaje = costoConIva > 0 ? ((ganancia / costoConIva) * 100).toFixed(1) : '0';
+  // Sin "valor || 0": null/undefined se muestran como "—", no como $0.00.
+  const precio = toNumberOrNull(repuesto.precioFinal);
+  const costoConIva = toNumberOrNull(repuesto.costoConIva);
+  const costoSinIva = toNumberOrNull(repuesto.costoSinIva);
+  const ganancia = precio !== null && costoConIva !== null ? precio - costoConIva : null;
+  const margenPorcentaje =
+    ganancia !== null && costoConIva !== null && costoConIva > 0 ? ((ganancia / costoConIva) * 100).toFixed(1) : null;
 
   const stockRatio = repuesto.stockMinimo > 0
     ? Math.min(100, Math.round((repuesto.stockActual / (repuesto.stockMinimo * 2)) * 100))
@@ -144,27 +163,29 @@ export const ProductoPreviewModal: React.FC<ProductoPreviewModalProps> = ({
                 <div className="p-2.5 bg-[#182032] border border-slate-800 rounded-lg">
                   <span className="text-[10px] text-slate-400 block uppercase">Precio de Venta</span>
                   <div className="text-lg font-bold text-slate-100 font-mono">
-                    ${precio.toFixed(2)}
+                    {formatMoney(precio)}
                   </div>
                   <span className="text-[10px] text-slate-500 block">PVP con IVA</span>
                 </div>
 
                 <div className="p-2.5 bg-[#182032] border border-slate-800 rounded-lg">
                   <span className="text-[10px] text-slate-400 block uppercase">Margen Comercial</span>
-                  <div className={`text-base font-bold font-mono ${ganancia >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    +${ganancia.toFixed(2)}
+                  <div className={`text-base font-bold font-mono ${ganancia === null ? 'text-slate-400' : ganancia >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {ganancia === null ? '—' : `${ganancia >= 0 ? '+' : '-'}${formatMoney(Math.abs(ganancia))}`}
                   </div>
-                  <span className="text-[10px] text-slate-500 block">+{margenPorcentaje}% s/costo</span>
+                  <span className="text-[10px] text-slate-500 block">
+                    {margenPorcentaje === null ? 'Sin costo registrado' : `${Number(margenPorcentaje) >= 0 ? '+' : ''}${margenPorcentaje}% s/costo`}
+                  </span>
                 </div>
 
                 <div className="p-2 bg-[#182032]/60 border border-slate-800/80 rounded-lg text-xs">
                   <span className="text-slate-400 block text-[10px]">Costo sin IVA</span>
-                  <span className="font-mono font-semibold text-slate-300">${costoSinIva.toFixed(2)}</span>
+                  <span className="font-mono font-semibold text-slate-300">{formatMoney(costoSinIva)}</span>
                 </div>
 
                 <div className="p-2 bg-[#182032]/60 border border-slate-800/80 rounded-lg text-xs">
                   <span className="text-slate-400 block text-[10px]">Costo con IVA (13%)</span>
-                  <span className="font-mono font-semibold text-slate-300">${costoConIva.toFixed(2)}</span>
+                  <span className="font-mono font-semibold text-slate-300">{formatMoney(costoConIva)}</span>
                 </div>
               </div>
 

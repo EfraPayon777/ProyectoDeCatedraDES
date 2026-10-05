@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Repuesto } from '../types';
 import { X, PlusCircle, PackagePlus } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../services/api';
+import { showApiError } from '../services/apiErrors';
+import { FieldErrors, MAX_MONTO, hasErrors, validarNumero, validarTexto } from '../utils/validators';
+import { toNumberOrNull } from '../utils/format';
+
+type CampoEntrada = 'cantidad' | 'proveedor' | 'costoAdquisicion';
 
 interface EntradaModalProps {
   repuesto: Repuesto | null;
@@ -11,17 +16,32 @@ interface EntradaModalProps {
 }
 
 export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, onSuccess }) => {
-  const [cantidad, setCantidad] = useState<number>(1);
+  const [cantidad, setCantidad] = useState<number | ''>(1);
   const [proveedor, setProveedor] = useState<string>('Distribuidora LubriPoint');
-  const [costoAdquisicion, setCostoAdquisicion] = useState<number>(repuesto ? Number(repuesto.costoSinIva) : 0);
+  const [costoAdquisicion, setCostoAdquisicion] = useState<number | ''>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<FieldErrors<CampoEntrada>>({});
+
+  // El modal permanece montado: al abrirlo para otro repuesto se precarga su costo sin IVA (calculado por el backend).
+  useEffect(() => {
+    if (repuesto) {
+      setCantidad(1);
+      setCostoAdquisicion(toNumberOrNull(repuesto.costoSinIva) ?? '');
+      setErrors({});
+    }
+  }, [repuesto?.id]);
 
   if (!repuesto) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cantidad <= 0) {
-      Swal.fire({ icon: 'warning', title: 'Cantidad no válida', text: 'La cantidad a ingresar debe ser mayor a 0.' });
+    const validationErrors: FieldErrors<CampoEntrada> = {
+      cantidad: validarNumero(cantidad, 'La cantidad', { entero: true, min: 1, max: 100000 }),
+      proveedor: validarTexto(proveedor, 'El proveedor', 150),
+      costoAdquisicion: validarNumero(costoAdquisicion, 'El costo de adquisición', { max: MAX_MONTO }),
+    };
+    setErrors(validationErrors);
+    if (hasErrors(validationErrors)) {
       return;
     }
 
@@ -30,7 +50,7 @@ export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, o
       await api.post('/entradas', {
         repuestoId: repuesto.id,
         cantidad: Number(cantidad),
-        proveedor,
+        proveedor: proveedor.trim(),
         costoAdquisicion: Number(costoAdquisicion),
       });
 
@@ -45,11 +65,7 @@ export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, o
       onSuccess();
       onClose();
     } catch (err: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error en la entrada',
-        text: err.response?.data?.message || 'No fue posible registrar la recepción de mercadería.',
-      });
+      showApiError(err, 'Error en la entrada', 'No fue posible registrar la recepción de mercadería.');
     } finally {
       setLoading(false);
     }
@@ -83,17 +99,19 @@ export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, o
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+        <form onSubmit={handleSubmit} noValidate className="space-y-3.5 text-xs">
           <div>
             <label className="block text-slate-300 font-medium mb-1">Cantidad de unidades recibidas *</label>
             <input
               type="number"
               min="1"
+              step="1"
               value={cantidad}
-              onChange={(e) => setCantidad(parseInt(e.target.value) || 0)}
+              onChange={(e) => setCantidad(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono font-bold"
               required
             />
+            {errors.cantidad && <p className="mt-1 text-[10px] text-rose-400">{errors.cantidad}</p>}
           </div>
 
           <div>
@@ -102,9 +120,11 @@ export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, o
               type="text"
               value={proveedor}
               onChange={(e) => setProveedor(e.target.value)}
+              maxLength={150}
               className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
               required
             />
+            {errors.proveedor && <p className="mt-1 text-[10px] text-rose-400">{errors.proveedor}</p>}
           </div>
 
           <div>
@@ -114,10 +134,11 @@ export const EntradaModal: React.FC<EntradaModalProps> = ({ repuesto, onClose, o
               step="0.01"
               min="0"
               value={costoAdquisicion}
-              onChange={(e) => setCostoAdquisicion(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setCostoAdquisicion(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
               required
             />
+            {errors.costoAdquisicion && <p className="mt-1 text-[10px] text-rose-400">{errors.costoAdquisicion}</p>}
           </div>
 
           <div className="pt-2 flex space-x-2">

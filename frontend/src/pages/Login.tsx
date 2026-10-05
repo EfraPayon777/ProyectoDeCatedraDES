@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, ArrowRight, Wrench, ShieldCheck, KeyRound } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../services/api';
+import { showApiError } from '../services/apiErrors';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('lubripointsv@gmail.com');
@@ -27,11 +28,7 @@ export const Login: React.FC = () => {
       });
       navigate('/');
     } catch (err: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de acceso',
-        text: err.response?.data?.message || 'Credenciales no válidas. Verifique correo y contraseña.',
-      });
+      showApiError(err, 'Error de acceso', 'Credenciales no válidas. Verifique correo y contraseña.');
     } finally {
       setLoading(false);
     }

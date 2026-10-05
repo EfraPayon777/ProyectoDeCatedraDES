@@ -15,6 +15,24 @@ import api from '../services/api';
 import { Repuesto, Orden } from '../types';
 import { ReceiptModal } from '../components/ReceiptModal';
 import Swal from 'sweetalert2';
+import { showApiError } from '../services/apiErrors';
+import { PREFIJOS_PLACA } from '../utils/placa';
+import {
+  FieldErrors,
+  TELEFONO_REGEX,
+  hasErrors,
+  normalizarPlaca,
+  validarNumero,
+  validarPlaca,
+  validarTexto,
+} from '../utils/validators';
+
+type CampoVenta = 'placa' | 'marca' | 'modelo' | 'clienteNombre' | 'clienteTelefono' | 'descripcionFalla' | 'descuento';
+
+const FieldError: React.FC<{ message?: string }> = ({ message }) =>
+  message ? <p className="mt-1 text-[10px] text-rose-400">{message}</p> : null;
+
+const errorBorder = (error?: string) => (error ? ' !border-rose-500/70' : '');
 
 interface CartItem {
   repuesto: Repuesto;
@@ -26,7 +44,9 @@ export const NuevaVenta: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [descuento, setDescuento] = useState<number>(0);
+  const [descuento, setDescuento] = useState<number | ''>(0);
+  const [errors, setErrors] = useState<FieldErrors<CampoVenta>>({});
+  const clearError = (campo: CampoVenta) => setErrors((prev) => ({ ...prev, [campo]: undefined }));
 
   const [placa, setPlaca] = useState('');
   const [marca, setMarca] = useState('');
@@ -103,18 +123,19 @@ export const NuevaVenta: React.FC = () => {
   };
 
   const subtotalTotal = cart.reduce((acc, item) => acc + item.cantidad * item.precioUnitario, 0);
-  const totalFinal = Math.max(0, subtotalTotal - descuento);
+  const descuentoNum = descuento === '' ? 0 : Number(descuento) || 0;
+  const totalFinal = Math.max(0, subtotalTotal - descuentoNum);
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
       const payload = {
-        placa,
-        marca,
-        modelo,
-        clienteNombre,
-        clienteTelefono,
-        descripcionFalla,
-        descuento: Number(descuento),
+        placa: normalizarPlaca(placa),
+        marca: marca.trim(),
+        modelo: modelo.trim(),
+        clienteNombre: clienteNombre.trim(),
+        clienteTelefono: clienteTelefono.trim() || undefined,
+        descripcionFalla: descripcionFalla.trim() || undefined,
+        descuento: descuentoNum,
         detalles: cart.map((item) => ({
           repuestoId: item.repuesto.id,
           cantidad: item.cantidad,
@@ -146,13 +167,10 @@ export const NuevaVenta: React.FC = () => {
       setClienteTelefono('');
       setDescripcionFalla('');
       setDescuento(0);
+      setErrors({});
     },
     onError: (err: any) => {
-      Swal.fire({
-        icon: 'error',
-        title: 'No se pudo emitir la orden',
-        text: err.response?.data?.message || 'Verifique que las cantidades no superen el stock disponible.',
-      });
+      showApiError(err, 'No se pudo emitir la orden', 'Verifique que las cantidades no superen el stock disponible.');
     },
   });
 
@@ -162,8 +180,24 @@ export const NuevaVenta: React.FC = () => {
       Swal.fire({ icon: 'warning', title: 'Orden vacía', text: 'Debe agregar al menos un repuesto para procesar la orden.' });
       return;
     }
-    if (!placa || !marca || !modelo || !clienteNombre) {
-      Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Por favor ingrese la placa, marca, modelo y nombre del cliente.' });
+    const tel = clienteTelefono.trim();
+    const validationErrors: FieldErrors<CampoVenta> = {
+      placa: validarPlaca(placa),
+      marca: validarTexto(marca, 'La marca', 50),
+      modelo: validarTexto(modelo, 'El modelo', 80),
+      clienteNombre: validarTexto(clienteNombre, 'El nombre del cliente', 120),
+      clienteTelefono:
+        tel && !TELEFONO_REGEX.test(tel) ? 'El teléfono debe tener 8 dígitos (ej: 7788-9900), opcionalmente con +503.' : undefined,
+      descripcionFalla: validarTexto(descripcionFalla, 'El detalle del trabajo', 1000, false),
+      descuento:
+        validarNumero(descuento, 'El descuento', { obligatorio: false }) ??
+        (Math.round(descuentoNum * 100) > Math.round(subtotalTotal * 100)
+          ? `El descuento no puede ser mayor al subtotal ($${subtotalTotal.toFixed(2)}).`
+          : undefined),
+    };
+    setErrors(validationErrors);
+    if (hasErrors(validationErrors)) {
+      Swal.fire({ icon: 'warning', title: 'Datos incompletos o inválidos', text: 'Revise los campos marcados en rojo.' });
       return;
     }
     createOrderMutation.mutate();
@@ -189,12 +223,26 @@ export const NuevaVenta: React.FC = () => {
                 <label className="block text-slate-300 font-medium mb-1">Placa del Vehículo *</label>
                 <input
                   type="text"
-                  placeholder="Ej: P-234567"
+                  placeholder="Ej: P-117022"
                   value={placa}
-                  onChange={(e) => setPlaca(e.target.value)}
-                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono uppercase"
+                  maxLength={20}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    // Solo se normaliza a mayúsculas: los caracteres inválidos no se eliminan en silencio,
+                    // se muestran con un mensaje que explica el problema.
+                    setPlaca(e.target.value.toUpperCase());
+                    clearError('placa');
+                  }}
+                  onBlur={() => placa && setErrors((prev) => ({ ...prev, placa: validarPlaca(placa) }))}
+                  title={`Prefijos permitidos: ${Object.keys(PREFIJOS_PLACA).join(', ')}`}
+                  className={`w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono uppercase${errorBorder(errors.placa)}`}
                   required
                 />
+                {errors.placa ? (
+                  <FieldError message={errors.placa} />
+                ) : (
+                  <p className="mt-1 text-[10px] text-slate-500">Ej: P-117022, PNC-123456, P-79-7DA</p>
+                )}
               </div>
 
               <div>
@@ -203,10 +251,15 @@ export const NuevaVenta: React.FC = () => {
                   type="text"
                   placeholder="Ej: Toyota"
                   value={marca}
-                  onChange={(e) => setMarca(e.target.value)}
-                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  maxLength={50}
+                  onChange={(e) => {
+                    setMarca(e.target.value);
+                    clearError('marca');
+                  }}
+                  className={`w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500${errorBorder(errors.marca)}`}
                   required
                 />
+                <FieldError message={errors.marca} />
               </div>
 
               <div>
@@ -215,10 +268,15 @@ export const NuevaVenta: React.FC = () => {
                   type="text"
                   placeholder="Ej: Corolla 2021"
                   value={modelo}
-                  onChange={(e) => setModelo(e.target.value)}
-                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  maxLength={80}
+                  onChange={(e) => {
+                    setModelo(e.target.value);
+                    clearError('modelo');
+                  }}
+                  className={`w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500${errorBorder(errors.modelo)}`}
                   required
                 />
+                <FieldError message={errors.modelo} />
               </div>
             </div>
 
@@ -229,10 +287,15 @@ export const NuevaVenta: React.FC = () => {
                   type="text"
                   placeholder="Nombre completo"
                   value={clienteNombre}
-                  onChange={(e) => setClienteNombre(e.target.value)}
-                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  maxLength={120}
+                  onChange={(e) => {
+                    setClienteNombre(e.target.value);
+                    clearError('clienteNombre');
+                  }}
+                  className={`w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500${errorBorder(errors.clienteNombre)}`}
                   required
                 />
+                <FieldError message={errors.clienteNombre} />
               </div>
 
               <div>
@@ -241,9 +304,14 @@ export const NuevaVenta: React.FC = () => {
                   type="text"
                   placeholder="Ej: 7788-9900"
                   value={clienteTelefono}
-                  onChange={(e) => setClienteTelefono(e.target.value)}
-                  className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  maxLength={15}
+                  onChange={(e) => {
+                    setClienteTelefono(e.target.value.replace(/[^0-9+\-\s]/g, ''));
+                    clearError('clienteTelefono');
+                  }}
+                  className={`w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500${errorBorder(errors.clienteTelefono)}`}
                 />
+                <FieldError message={errors.clienteTelefono} />
               </div>
             </div>
 
@@ -252,10 +320,15 @@ export const NuevaVenta: React.FC = () => {
               <textarea
                 placeholder="Ej: Mantenimiento preventivo, cambio de aceite 10W-30 y filtro de motor..."
                 value={descripcionFalla}
-                onChange={(e) => setDescripcionFalla(e.target.value)}
+                maxLength={1000}
+                onChange={(e) => {
+                  setDescripcionFalla(e.target.value);
+                  clearError('descripcionFalla');
+                }}
                 rows={2}
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                className={`w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500${errorBorder(errors.descripcionFalla)}`}
               />
+              <FieldError message={errors.descripcionFalla} />
             </div>
           </div>
 
@@ -406,11 +479,15 @@ export const NuevaVenta: React.FC = () => {
                   min="0"
                   step="0.01"
                   value={descuento}
-                  onChange={(e) => setDescuento(parseFloat(e.target.value) || 0)}
-                  className="w-20 bg-[#182032] border border-slate-700 rounded px-2 py-1 text-right text-amber-400 font-mono font-semibold text-xs focus:outline-none"
+                  onChange={(e) => {
+                    setDescuento(e.target.value === '' ? '' : Number(e.target.value));
+                    clearError('descuento');
+                  }}
+                  className={`w-20 bg-[#182032] border border-slate-700 rounded px-2 py-1 text-right text-amber-400 font-mono font-semibold text-xs focus:outline-none${errorBorder(errors.descuento)}`}
                 />
               </div>
             </div>
+            {errors.descuento && <p className="-mt-1 text-right text-[10px] text-rose-400">{errors.descuento}</p>}
 
             <div className="flex justify-between text-sm font-bold text-white border-t border-slate-800 pt-2 font-mono">
               <span>Total a cobrar:</span>
