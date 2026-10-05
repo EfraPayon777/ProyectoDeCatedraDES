@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
+import { RequirePermission, HomeRoute } from './components/RequirePermission';
 
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -33,11 +34,39 @@ const ProtectedLayout: React.FC = () => {
       <Header />
       <main className="flex-1 pb-16">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/nueva-venta" element={<NuevaVenta />} />
-          <Route path="/categorias" element={<CategoriasProductos />} />
-          <Route path="/historial" element={<HistorialVentas />} />
-          <Route path="/inventario" element={<Inventario />} />
+          <Route path="/" element={<HomeRoute dashboard={<Dashboard />} />} />
+          <Route
+            path="/nueva-venta"
+            element={
+              <RequirePermission permission="ordenes.create">
+                <NuevaVenta />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/categorias"
+            element={
+              <RequirePermission permission="catalogo.view">
+                <CategoriasProductos />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/historial"
+            element={
+              <RequirePermission permission="ordenes.view">
+                <HistorialVentas />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/inventario"
+            element={
+              <RequirePermission permission="catalogo.view">
+                <Inventario />
+              </RequirePermission>
+            }
+          />
           <Route path="/perfil" element={<PerfilEquipo />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

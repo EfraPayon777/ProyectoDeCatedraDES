@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -23,14 +23,21 @@ export const Header: React.FC = () => {
     navigate('/login');
   };
 
+  // Cada módulo se muestra según los permisos que devuelve el backend (no por nombre de rol).
   const navItems = [
-    { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { label: 'Punto de Venta', path: '/nueva-venta', icon: ShoppingCart, highlight: true },
-    { label: 'Historial', path: '/historial', icon: History },
-    { label: 'Inventario', path: '/inventario', icon: Boxes },
-    { label: 'Categorías', path: '/categorias', icon: Tag },
-    { label: 'Equipo y Perfil', path: '/perfil', icon: UserCheck },
-  ];
+    { label: 'Dashboard', path: '/', icon: LayoutDashboard, visible: hasPermission('finanzas.view') },
+    { label: 'Punto de Venta', path: '/nueva-venta', icon: ShoppingCart, highlight: true, visible: hasPermission('ordenes.create') },
+    { label: 'Órdenes', path: '/historial', icon: History, visible: hasPermission('ordenes.view') },
+    {
+      label: hasPermission('inventario.view') ? 'Inventario' : 'Catálogo',
+      path: '/inventario',
+      icon: Boxes,
+      visible: hasPermission('catalogo.view'),
+    },
+    { label: 'Categorías', path: '/categorias', icon: Tag, visible: hasPermission('catalogo.view') },
+    // Sin gestión de usuarios, la misma ruta solo muestra el perfil propio
+    { label: hasPermission('usuarios.view') ? 'Equipo y Perfil' : 'Mi Perfil', path: '/perfil', icon: UserCheck },
+  ].filter((item) => item.visible !== false);
 
   return (
     <header className="w-full bg-[#0f1422] border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-md">

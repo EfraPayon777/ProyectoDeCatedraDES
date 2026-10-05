@@ -1,11 +1,16 @@
+import type { Permission } from '../context/permissions';
+
 export type UserRole = 'Administrador' | 'Jefe de Pista' | 'Mecánico';
 
 export interface User {
   id: number;
   nombre: string;
   email: string;
-  rol: UserRole;
+  // Puede contener un rol retirado (p. ej. "Empleado") en usuarios antiguos: sin permisos hasta reasignarlo.
+  rol: UserRole | string;
   activo: boolean;
+  /** Permisos efectivos calculados por el backend según el rol. */
+  permisos?: Permission[];
   fechaRegistro: string;
 }
 
@@ -19,8 +24,9 @@ export interface Repuesto {
   codigo: string;
   nombre: string;
   descripcion?: string;
-  costoSinIva: number;
-  costoConIva: number;
+  // El backend los calcula con IVA 13% si se registran en 0/vacío. En PostgreSQL llegan como string decimal.
+  costoSinIva: number | string | null;
+  costoConIva: number | string | null;
   precioFinal: number;
   stockActual: number;
   stockMinimo: number;

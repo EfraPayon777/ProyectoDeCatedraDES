@@ -1,15 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { X, Upload, PackagePlus, Edit2, Sparkles } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { X, Upload, PackagePlus, Edit2, Sparkles, Info } from 'lucide-react';
 import api from '../services/api';
 import { Repuesto, Categoria } from '../types';
 import Swal from 'sweetalert2';
+import { useAuth } from '../context/AuthContext';
+import { AccessDenied } from './RequirePermission';
+import { showApiError } from '../services/apiErrors';
+import { formatMoney } from '../utils/format';
+import {
+  CODIGO_REPUESTO_REGEX,
+  FieldErrors,
+  MAX_MONTO,
+  MAX_STOCK,
+  hasErrors,
+  validarNumero,
+  validarTexto,
+} from '../utils/validators';
+
+type CampoProducto =
+  | 'codigo'
+  | 'nombre'
+  | 'categoriaId'
+  | 'precio'
+  | 'costoSinIva'
+  | 'costoConIva'
+  | 'stockActual'
+  | 'stockMinimo'
+  | 'descripcion';
+
+const FieldError: React.FC<{ message?: string }> = ({ message }) =>
+  message ? <p className="mt-1 text-[10px] text-rose-400">{message}</p> : null;
+
+const inputClass = (error?: string) =>
+  `w-full bg-[#182032] border rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 ${
+    error
+      ? 'border-rose-500/70 focus:ring-rose-500/30 focus:border-rose-500'
+      : 'border-slate-700/80 focus:ring-amber-500/30 focus:border-amber-500'
+  }`;
 
 interface ProductoModalProps {
   isOpen: boolean;
   onClose: () => void;
   repuestoToEdit?: Repuesto | null;
-  onSuccess: () => void;
+  onSuccess: (saved?: Repuesto) => void;
 }
 
 export const ProductoModal: React.FC<ProductoModalProps> = ({
@@ -19,6 +53,8 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   onSuccess,
 }) => {
   const isEditing = Boolean(repuestoToEdit);
+  const { hasPermission } = useAuth();
+  const queryClient = useQueryClient();
 
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
@@ -32,6 +68,11 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors<CampoProducto>>({});
+  // Qué costo modificó el usuario en esta edición: si solo cambia uno, el otro se envía vacío
+  // para que el backend lo recalcule (evita enviar un par incoherente).
+  const [sinIvaTouched, setSinIvaTouched] = useState(false);
+  const [conIvaTouched, setConIvaTouched] = useState(false);
 
   const { data: categorias } = useQuery<Categoria[]>({
     queryKey: ['categorias'],
@@ -43,13 +84,16 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   });
 
   useEffect(() => {
+    setErrors({});
+    setSinIvaTouched(false);
+    setConIvaTouched(false);
     if (repuestoToEdit) {
       setCodigo(repuestoToEdit.codigo || '');
       setNombre(repuestoToEdit.nombre || '');
       setCategoriaId(repuestoToEdit.categoriaId || (repuestoToEdit.categoria?.id ?? ''));
-      setPrecio(repuestoToEdit.precioFinal ?? '');
-      setCostoSinIva(repuestoToEdit.costoSinIva ?? '');
-      setCostoConIva(repuestoToEdit.costoConIva ?? '');
+      setCostoSinIva(repuestoToEdit.costoSinIva !== null && repuestoToEdit.costoSinIva !== undefined ? Number(repuestoToEdit.costoSinIva) : '');
+      setCostoConIva(repuestoToEdit.costoConIva !== null && repuestoToEdit.costoConIva !== undefined ? Number(repuestoToEdit.costoConIva) : '');
+      setPrecio(repuestoToEdit.precioFinal !== null && repuestoToEdit.precioFinal !== undefined ? Number(repuestoToEdit.precioFinal) : '');
       setStockActual(repuestoToEdit.stockActual ?? 0);
       setStockMinimo(repuestoToEdit.stockMinimo ?? 5);
       setDescripcion(repuestoToEdit.descripcion || '');
@@ -72,14 +116,53 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Sin permiso catalogo.create / catalogo.edit (p. ej. Mecánico) el formulario no se muestra.
+  // El backend igualmente responde 403 a POST/PUT /repuestos.
+  if (!hasPermission(isEditing ? 'catalogo.edit' : 'catalogo.create')) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div className="relative w-full max-w-md bg-[#111726] border border-slate-800 rounded-xl shadow-xl text-slate-100">
+          <button onClick={onClose} className="absolute top-3 right-3 p-1 text-slate-400 hover:text-white rounded">
+            <X className="w-4 h-4" />
+          </button>
+          <AccessDenied />
+        </div>
+      </div>
+    );
+  }
+
+  const clearError = (campo: CampoProducto) => setErrors((prev) => ({ ...prev, [campo]: undefined }));
+
+  // El IVA NO se calcula aquí: lo calcula el backend al guardar (fuente única de la fórmula).
   const handleCostoSinIvaChange = (val: string) => {
-    const num = parseFloat(val);
-    setCostoSinIva(val === '' ? '' : num);
-    if (!isNaN(num) && num > 0) {
-      setCostoConIva(parseFloat((num * 1.13).toFixed(2)));
-    } else {
-      setCostoConIva('');
-    }
+    setCostoSinIva(val === '' ? '' : parseFloat(val));
+    setSinIvaTouched(true);
+    if (!conIvaTouched) setCostoConIva('');
+    clearError('costoSinIva');
+  };
+
+  const handleCostoConIvaChange = (val: string) => {
+    setCostoConIva(val === '' ? '' : parseFloat(val));
+    setConIvaTouched(true);
+    if (!sinIvaTouched) setCostoSinIva('');
+    clearError('costoConIva');
+  };
+
+  const validar = (): FieldErrors<CampoProducto> => {
+    const e: FieldErrors<CampoProducto> = {};
+    const cod = codigo.trim();
+    if (!cod) e.codigo = 'El código es obligatorio (puede usar "Auto").';
+    else if (cod.length > 30) e.codigo = 'El código no debe superar 30 caracteres.';
+    else if (!CODIGO_REPUESTO_REGEX.test(cod)) e.codigo = 'El código solo admite letras, números, guion (-), guion bajo (_) y punto (.).';
+    e.nombre = validarTexto(nombre, 'El nombre', 150);
+    if (!categoriaId) e.categoriaId = 'Seleccione una categoría.';
+    e.precio = validarNumero(precio, 'El precio de venta', { min: 0, minExclusivo: true, max: MAX_MONTO });
+    e.costoSinIva = validarNumero(costoSinIva, 'El costo sin IVA', { obligatorio: false, max: MAX_MONTO });
+    e.costoConIva = validarNumero(costoConIva, 'El costo con IVA', { obligatorio: false, max: MAX_MONTO });
+    e.stockActual = validarNumero(stockActual, 'La existencia', { entero: true, max: MAX_STOCK });
+    e.stockMinimo = validarNumero(stockMinimo, 'El stock mínimo', { obligatorio: false, entero: true, max: MAX_STOCK });
+    e.descripcion = validarTexto(descripcion, 'La descripción', 1000, false);
+    return e;
   };
 
   const compressImage = (file: File): Promise<File> => {
@@ -132,20 +215,14 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   const handleGenerarCodigo = () => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     setCodigo(`REP-${randomNum}`);
+    setErrors((prev) => ({ ...prev, codigo: undefined }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim()) {
-      Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Ingrese el nombre del repuesto.' });
-      return;
-    }
-    if (!categoriaId) {
-      Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Seleccione una categoría.' });
-      return;
-    }
-    if (precio === '' || Number(precio) <= 0) {
-      Swal.fire({ icon: 'warning', title: 'Precio no válido', text: 'El precio de venta debe ser mayor a 0.' });
+    const validationErrors = validar();
+    setErrors(validationErrors);
+    if (hasErrors(validationErrors)) {
       return;
     }
 
@@ -175,10 +252,11 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
       }
 
       const payload = {
-        codigo: codigo.trim() || undefined,
+        codigo: codigo.trim(),
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || undefined,
         precioFinal: Number(precio),
+        // Vacío → 0: el backend interpreta 0 como "no ingresado" y lo calcula con IVA 13%
         costoSinIva: costoSinIva !== '' ? Number(costoSinIva) : 0,
         costoConIva: costoConIva !== '' ? Number(costoConIva) : 0,
         stockActual: stockActual !== '' ? Number(stockActual) : 0,
@@ -187,34 +265,29 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
         imagenUrl: imagenUrl || undefined,
       };
 
-      if (isEditing && repuestoToEdit) {
-        await api.put(`/repuestos/${repuestoToEdit.id}`, payload);
-        Swal.fire({
-          icon: 'success',
-          title: 'Repuesto actualizado',
-          text: `"${nombre}" fue modificado correctamente.`,
-          timer: 1600,
-          showConfirmButton: false,
-        });
-      } else {
-        await api.post('/repuestos', payload);
-        Swal.fire({
-          icon: 'success',
-          title: 'Repuesto registrado',
-          text: `"${nombre}" fue incorporado al catálogo.`,
-          timer: 1600,
-          showConfirmButton: false,
-        });
-      }
+      const res =
+        isEditing && repuestoToEdit
+          ? await api.put<Repuesto>(`/repuestos/${repuestoToEdit.id}`, payload)
+          : await api.post<Repuesto>('/repuestos', payload);
+      const saved = res.data;
 
-      onSuccess();
+      // Se muestran los costos tal como los devolvió el backend (ya calculados).
+      if (saved?.id) {
+        queryClient.setQueryData(['repuesto', saved.id], saved);
+      }
+      Swal.fire({
+        icon: 'success',
+        title: isEditing ? 'Repuesto actualizado' : 'Repuesto registrado',
+        html: `"${saved?.nombre ?? nombre.trim()}" ${isEditing ? 'fue modificado correctamente' : 'fue incorporado al catálogo'}.<br/>
+          <span style="font-size:12px;opacity:.8">Costo sin IVA: ${formatMoney(saved?.costoSinIva)} · Costo con IVA: ${formatMoney(saved?.costoConIva)}</span>`,
+        timer: 2600,
+        showConfirmButton: false,
+      });
+
+      onSuccess(saved);
       onClose();
     } catch (err: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error al guardar',
-        text: err.response?.data?.message || 'No se pudo guardar el repuesto en el catálogo.',
-      });
+      showApiError(err, 'Error al guardar', 'No se pudo guardar el repuesto en el catálogo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -245,11 +318,11 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
+        <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3.5 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="font-medium text-slate-300">Código SKU</label>
+                <label className="font-medium text-slate-300">Código SKU *</label>
                 {!isEditing && (
                   <button
                     type="button"
@@ -264,10 +337,15 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
               <input
                 type="text"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setCodigo(e.target.value.toUpperCase());
+                  clearError('codigo');
+                }}
                 placeholder="REP-XXXX"
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono uppercase"
+                maxLength={30}
+                className={`${inputClass(errors.codigo)} font-mono uppercase`}
               />
+              <FieldError message={errors.codigo} />
             </div>
 
             <div>
@@ -276,9 +354,12 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
               </label>
               <select
                 value={categoriaId}
-                onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : '')}
+                onChange={(e) => {
+                  setCategoriaId(e.target.value ? Number(e.target.value) : '');
+                  clearError('categoriaId');
+                }}
                 required
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                className={inputClass(errors.categoriaId)}
               >
                 <option value="">-- Seleccionar --</option>
                 {categorias?.map((cat) => (
@@ -287,6 +368,7 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
                   </option>
                 ))}
               </select>
+              <FieldError message={errors.categoriaId} />
             </div>
           </div>
 
@@ -297,11 +379,16 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
             <input
               type="text"
               value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
+              onChange={(e) => {
+                setNombre(e.target.value);
+                clearError('nombre');
+              }}
               placeholder="Ej. Aceite Sintético 5W-30 (1 Galón)"
               required
-              className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+              maxLength={150}
+              className={inputClass(errors.nombre)}
             />
+            <FieldError message={errors.nombre} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -314,11 +401,15 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
                 step="0.01"
                 min="0"
                 value={precio}
-                onChange={(e) => setPrecio(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                onChange={(e) => {
+                  setPrecio(e.target.value === '' ? '' : parseFloat(e.target.value));
+                  clearError('precio');
+                }}
                 placeholder="0.00"
                 required
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono font-bold"
+                className={`${inputClass(errors.precio)} font-mono font-bold`}
               />
+              <FieldError message={errors.precio} />
             </div>
 
             <div>
@@ -331,9 +422,10 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
                 min="0"
                 value={costoSinIva}
                 onChange={(e) => handleCostoSinIvaChange(e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
+                placeholder="Auto"
+                className={`${inputClass(errors.costoSinIva)} font-mono`}
               />
+              <FieldError message={errors.costoSinIva} />
             </div>
 
             <div>
@@ -345,12 +437,20 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
                 step="0.01"
                 min="0"
                 value={costoConIva}
-                onChange={(e) => setCostoConIva(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                placeholder="0.00"
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
+                onChange={(e) => handleCostoConIvaChange(e.target.value)}
+                placeholder="Auto"
+                className={`${inputClass(errors.costoConIva)} font-mono`}
               />
+              <FieldError message={errors.costoConIva} />
             </div>
           </div>
+          <p className="flex items-start gap-1.5 text-[10px] text-slate-400 -mt-1">
+            <Info className="w-3 h-3 shrink-0 mt-px text-amber-400" />
+            <span>
+              Puede ingresar uno de los costos (o ninguno): el sistema calcula el otro automáticamente con IVA 13% al
+              guardar. Si deja ambos vacíos, se toma el precio de venta como base.
+            </span>
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -361,10 +461,15 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
                 type="number"
                 min="0"
                 value={stockActual}
-                onChange={(e) => setStockActual(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                step="1"
+                onChange={(e) => {
+                  setStockActual(e.target.value === '' ? '' : Number(e.target.value));
+                  clearError('stockActual');
+                }}
                 placeholder="0"
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
+                className={`${inputClass(errors.stockActual)} font-mono`}
               />
+              <FieldError message={errors.stockActual} />
             </div>
 
             <div>
@@ -373,12 +478,17 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
               </label>
               <input
                 type="number"
-                min="1"
+                min="0"
+                step="1"
                 value={stockMinimo}
-                onChange={(e) => setStockMinimo(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                onChange={(e) => {
+                  setStockMinimo(e.target.value === '' ? '' : Number(e.target.value));
+                  clearError('stockMinimo');
+                }}
                 placeholder="5"
-                className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
+                className={`${inputClass(errors.stockMinimo)} font-mono`}
               />
+              <FieldError message={errors.stockMinimo} />
             </div>
           </div>
 
@@ -389,10 +499,15 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
             <textarea
               rows={2}
               value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
+              onChange={(e) => {
+                setDescripcion(e.target.value);
+                clearError('descripcion');
+              }}
               placeholder="Especificaciones o compatibilidad vehicular..."
-              className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+              maxLength={1000}
+              className={inputClass(errors.descripcion)}
             />
+            <FieldError message={errors.descripcion} />
           </div>
 
           <div>

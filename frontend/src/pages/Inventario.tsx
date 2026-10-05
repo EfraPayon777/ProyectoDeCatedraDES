@@ -18,9 +18,18 @@ import { EntradaModal } from '../components/EntradaModal';
 import { ProductoModal } from '../components/ProductoModal';
 import { ProductoPreviewModal } from '../components/ProductoPreviewModal';
 import Swal from 'sweetalert2';
+import { useAuth } from '../context/AuthContext';
+import { showApiError } from '../services/apiErrors';
+import { formatMoney } from '../utils/format';
 
 export const Inventario: React.FC = () => {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
+  const puedeCrear = hasPermission('catalogo.create');
+  const puedeEditar = hasPermission('catalogo.edit');
+  const puedeEliminar = hasPermission('catalogo.delete');
+  const puedeRegistrarEntradas = hasPermission('inventario.create');
+  const puedeVerInventario = hasPermission('inventario.view');
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState('');
@@ -56,15 +65,12 @@ export const Inventario: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
       queryClient.invalidateQueries({ queryKey: ['repuestos-catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['repuesto'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       Swal.fire({ icon: 'success', title: 'Repuesto eliminado', timer: 1400, showConfirmButton: false });
     },
     onError: (err: any) => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Operación no permitida',
-        text: err.response?.data?.message || 'El repuesto se encuentra asociado a órdenes de trabajo existentes.',
-      });
+      showApiError(err, 'Operación no permitida', 'El repuesto se encuentra asociado a órdenes de trabajo existentes.');
     },
   });
 
@@ -132,11 +138,18 @@ export const Inventario: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-800/60">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Inventario y Existencias</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Control de artículos, umbrales de reabastecimiento y entradas de almacén</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            {puedeVerInventario ? 'Inventario y Existencias' : 'Catálogo de Repuestos'}
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {puedeVerInventario
+              ? 'Control de artículos, umbrales de reabastecimiento y entradas de almacén'
+              : 'Consulta de repuestos, precios y existencias disponibles'}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {puedeCrear && (
           <button
             onClick={() => {
               setSelectedRepuestoEdit(null);
@@ -147,7 +160,9 @@ export const Inventario: React.FC = () => {
             <Plus className="w-4 h-4" />
             <span>Nuevo Repuesto</span>
           </button>
+          )}
 
+          {puedeVerInventario && (
           <button
             onClick={handleDownloadExcel}
             disabled={isDownloading}
@@ -156,6 +171,7 @@ export const Inventario: React.FC = () => {
             <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
             <span>{isDownloading ? 'Generando...' : 'Exportar Excel'}</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -312,7 +328,7 @@ export const Inventario: React.FC = () => {
                     </td>
 
                     <td className="py-2.5 px-3.5 text-slate-400 max-w-xs truncate">{item.descripcion || '---'}</td>
-                    <td className="py-2.5 px-3.5 font-mono font-semibold text-slate-100">${Number(item.precioFinal).toFixed(2)}</td>
+                    <td className="py-2.5 px-3.5 font-mono font-semibold text-slate-100">{formatMoney(item.precioFinal)}</td>
 
                     <td className="py-2.5 px-3.5 text-center">
                       <div className="flex flex-col items-center">
@@ -352,6 +368,7 @@ export const Inventario: React.FC = () => {
                           <Eye className="w-3.5 h-3.5" />
                         </button>
 
+                        {puedeRegistrarEntradas && (
                         <button
                           onClick={() => setSelectedRepuestoEntrada(item)}
                           title="Entrada de mercadería"
@@ -359,7 +376,9 @@ export const Inventario: React.FC = () => {
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
                         </button>
+                        )}
 
+                        {puedeEditar && (
                         <button
                           onClick={() => {
                             setSelectedRepuestoEdit(item);
@@ -370,7 +389,9 @@ export const Inventario: React.FC = () => {
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
+                        )}
 
+                        {puedeEliminar && (
                         <button
                           onClick={() => handleDelete(item)}
                           title="Eliminar del catálogo"
@@ -378,6 +399,7 @@ export const Inventario: React.FC = () => {
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -399,6 +421,7 @@ export const Inventario: React.FC = () => {
         onClose={() => setSelectedRepuestoEntrada(null)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
+          queryClient.invalidateQueries({ queryKey: ['repuesto'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
         }}
       />
@@ -414,6 +437,7 @@ export const Inventario: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['inventario-stock'] });
           queryClient.invalidateQueries({ queryKey: ['repuestos-catalog'] });
           queryClient.invalidateQueries({ queryKey: ['repuestos'] });
+          queryClient.invalidateQueries({ queryKey: ['repuesto'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
         }}
       />
@@ -421,13 +445,21 @@ export const Inventario: React.FC = () => {
       <ProductoPreviewModal
         repuesto={selectedRepuestoPreview}
         onClose={() => setSelectedRepuestoPreview(null)}
-        onEdit={(repuesto) => {
-          setSelectedRepuestoEdit(repuesto);
-          setIsProductoModalOpen(true);
-        }}
-        onAddStock={(repuesto) => {
-          setSelectedRepuestoEntrada(repuesto);
-        }}
+        onEdit={
+          puedeEditar
+            ? (repuesto) => {
+                setSelectedRepuestoEdit(repuesto);
+                setIsProductoModalOpen(true);
+              }
+            : undefined
+        }
+        onAddStock={
+          puedeRegistrarEntradas
+            ? (repuesto) => {
+                setSelectedRepuestoEntrada(repuesto);
+              }
+            : undefined
+        }
       />
     </div>
   );

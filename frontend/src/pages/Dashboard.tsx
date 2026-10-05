@@ -12,10 +12,12 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import api, { downloadExcelFile } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { DashboardSummary } from '../types';
 import Swal from 'sweetalert2';
 
 export const Dashboard: React.FC = () => {
+  const { hasPermission } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
@@ -72,6 +74,7 @@ export const Dashboard: React.FC = () => {
           <p className="text-xs text-slate-400 mt-0.5">Indicadores financieros, existencias críticas y volumen de taller</p>
         </div>
         <div className="flex items-center space-x-2.5">
+          {hasPermission('ordenes.create') && (
           <Link
             to="/nueva-venta"
             className="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold px-3.5 py-2 rounded-lg flex items-center space-x-2 text-xs shadow-sm transition-all"
@@ -79,6 +82,7 @@ export const Dashboard: React.FC = () => {
             <PlusCircle className="w-4 h-4" />
             <span>Emitir Orden / Venta</span>
           </Link>
+          )}
         </div>
       </div>
 
@@ -207,6 +211,7 @@ export const Dashboard: React.FC = () => {
         <div className="bg-[#111726] border border-slate-800 rounded-xl p-5 space-y-3">
           <h3 className="font-bold text-sm text-white uppercase tracking-wider">Operaciones Rápidas</h3>
           <div className="space-y-2.5">
+            {hasPermission('ordenes.create') && (
             <Link
               to="/nueva-venta"
               className="w-full bg-[#182032] hover:bg-[#202b42] border border-slate-800 rounded-lg p-3 flex items-center justify-between text-slate-200 transition-all group"
@@ -222,6 +227,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
             </Link>
+            )}
 
             <Link
               to="/inventario"
@@ -239,6 +245,7 @@ export const Dashboard: React.FC = () => {
               <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
             </Link>
 
+            {hasPermission('inventario.view') && (
             <button
               onClick={handleDownloadExcel}
               disabled={isDownloading}
@@ -257,6 +264,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
             </button>
+            )}
           </div>
         </div>
 

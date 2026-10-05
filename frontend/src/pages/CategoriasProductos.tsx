@@ -5,11 +5,24 @@ import { Tag, Plus, Edit2, Trash2, Boxes, ArrowRight, FolderPlus } from 'lucide-
 import api from '../services/api';
 import { Categoria } from '../types';
 import Swal from 'sweetalert2';
+import { useAuth } from '../context/AuthContext';
+import { showApiError } from '../services/apiErrors';
+import { validarTexto } from '../utils/validators';
+
+const MAX_NOMBRE_CATEGORIA = 100;
+const validarNombreCategoria = (value: string) =>
+  validarTexto(value, 'El nombre de la categoría', MAX_NOMBRE_CATEGORIA);
 
 export const CategoriasProductos: React.FC = () => {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
+  const puedeCrear = hasPermission('catalogo.create');
+  const puedeEditar = hasPermission('catalogo.edit');
+  const puedeEliminar = hasPermission('catalogo.delete');
+  const puedeGestionar = puedeCrear; // formulario "Registrar Nueva Categoría"
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
+  const [errorNombre, setErrorNombre] = useState<string | undefined>();
   const [filtro, setFiltro] = useState('');
 
   const { data: categorias, isLoading } = useQuery<Categoria[]>({
@@ -37,11 +50,7 @@ export const CategoriasProductos: React.FC = () => {
       });
     },
     onError: (err: any) => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de registro',
-        text: err.response?.data?.message || 'No se pudo crear la categoría.',
-      });
+      showApiError(err, 'Error de registro', 'No se pudo crear la categoría.');
     },
   });
 
@@ -63,11 +72,7 @@ export const CategoriasProductos: React.FC = () => {
       });
     },
     onError: (err: any) => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de actualización',
-        text: err.response?.data?.message || 'No se pudo modificar la categoría.',
-      });
+      showApiError(err, 'Error de actualización', 'No se pudo modificar la categoría.');
     },
   });
 
@@ -87,17 +92,15 @@ export const CategoriasProductos: React.FC = () => {
       });
     },
     onError: (err: any) => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Operación restringida',
-        text: err.response?.data?.message || 'La categoría contiene repuestos vinculados.',
-      });
+      showApiError(err, 'Operación restringida', 'La categoría contiene repuestos vinculados.');
     },
   });
 
   const handleCreateCategory = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevaCategoria.trim()) return;
+    const error = validarNombreCategoria(nuevaCategoria);
+    setErrorNombre(error);
+    if (error) return;
     createCatMutation.mutate(nuevaCategoria);
   };
 
@@ -107,16 +110,13 @@ export const CategoriasProductos: React.FC = () => {
       text: 'Ingrese la nueva denominación:',
       input: 'text',
       inputValue: cat.nombre,
+      inputAttributes: { maxlength: String(MAX_NOMBRE_CATEGORIA) },
       showCancelButton: true,
       confirmButtonText: 'Guardar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#f59e0b',
       cancelButtonColor: '#334155',
-      inputValidator: (value) => {
-        if (!value || !value.trim()) {
-          return 'El nombre de la categoría es obligatorio.';
-        }
-      },
+      inputValidator: (value) => validarNombreCategoria(value || '') ?? null,
     }).then((result) => {
       if (result.isConfirmed && result.value) {
         updateCatMutation.mutate({ id: cat.id, nombre: result.value });
@@ -168,6 +168,7 @@ export const CategoriasProductos: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {puedeGestionar && (
         <div className="bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-4 h-fit">
           <div className="flex items-center space-x-2 text-slate-200 pb-2 border-b border-slate-800">
             <FolderPlus className="w-4 h-4 text-amber-400" />
@@ -177,7 +178,7 @@ export const CategoriasProductos: React.FC = () => {
             Agrupe insumos por familia técnica (por ejemplo: Aceites de Motor, Filtros, Sistema de Frenos).
           </p>
 
-          <form onSubmit={handleCreateCategory} className="space-y-3">
+          <form onSubmit={handleCreateCategory} noValidate className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">
                 Nombre de la categoría *
@@ -186,10 +187,15 @@ export const CategoriasProductos: React.FC = () => {
                 type="text"
                 placeholder="Ej. Baterías y Encendido"
                 value={nuevaCategoria}
-                onChange={(e) => setNuevaCategoria(e.target.value)}
+                onChange={(e) => {
+                  setNuevaCategoria(e.target.value);
+                  setErrorNombre(undefined);
+                }}
+                maxLength={MAX_NOMBRE_CATEGORIA}
                 className="w-full bg-[#182032] border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
                 required
               />
+              {errorNombre && <p className="mt-1 text-[10px] text-rose-400">{errorNombre}</p>}
             </div>
 
             <button
@@ -202,8 +208,9 @@ export const CategoriasProductos: React.FC = () => {
             </button>
           </form>
         </div>
+        )}
 
-        <div className="lg:col-span-2 bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div className={`${puedeGestionar ? 'lg:col-span-2' : 'lg:col-span-3'} bg-[#111726] border border-slate-800 rounded-xl p-5 shadow-sm space-y-4`}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h2 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -232,13 +239,13 @@ export const CategoriasProductos: React.FC = () => {
                 <tr>
                   <th className="py-2.5 px-3.5 w-16">ID</th>
                   <th className="py-2.5 px-3.5">Nombre</th>
-                  <th className="py-2.5 px-3.5 text-right w-36">Acciones</th>
+                  {(puedeEditar || puedeEliminar) && <th className="py-2.5 px-3.5 text-right w-36">Acciones</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-slate-500">
+                    <td colSpan={puedeEditar || puedeEliminar ? 3 : 2} className="py-8 text-center text-slate-500">
                       Cargando clasificaciones...
                     </td>
                   </tr>
@@ -247,8 +254,10 @@ export const CategoriasProductos: React.FC = () => {
                     <tr key={cat.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-2.5 px-3.5 font-mono text-slate-400">#{cat.id}</td>
                       <td className="py-2.5 px-3.5 font-medium text-slate-100">{cat.nombre}</td>
+                      {(puedeEditar || puedeEliminar) && (
                       <td className="py-2.5 px-3.5 text-right">
                         <div className="flex items-center justify-end space-x-1.5">
+                          {puedeEditar && (
                           <button
                             onClick={() => handleEditCategory(cat)}
                             title="Editar denominación"
@@ -256,7 +265,9 @@ export const CategoriasProductos: React.FC = () => {
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
+                          )}
 
+                          {puedeEliminar && (
                           <button
                             onClick={() => handleDeleteCategory(cat.id, cat.nombre)}
                             title="Eliminar categoría"
@@ -264,13 +275,15 @@ export const CategoriasProductos: React.FC = () => {
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
+                          )}
                         </div>
                       </td>
+                      )}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} className="py-6 text-center text-slate-500">
+                    <td colSpan={puedeEditar || puedeEliminar ? 3 : 2} className="py-6 text-center text-slate-500">
                       No se encontraron categorías registradas.
                     </td>
                   </tr>
